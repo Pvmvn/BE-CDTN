@@ -15,9 +15,9 @@ app.use(express.json());
 app.use(cors());
 
 // Mount routers
-app.use('/api/auth', require('./router/auth'));
-app.use('/api/categories', require('./router/category'));
-app.use('/api/products', require('./router/product'));
+app.use('/api/auth', require('./router/authRouter'));
+app.use('/api/categories', require('./router/categoryRouter'));
+app.use('/api/products', require('./router/productRouter'));
 
 app.get('/', (req, res) => {
     res.send('API Quản lý Cafe đang chạy...');

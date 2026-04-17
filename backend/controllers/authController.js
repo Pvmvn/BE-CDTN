@@ -1,4 +1,4 @@
-const User = require('../model/User');
+const User = require('../model/UserModel.js');
 const jwt = require('jsonwebtoken');
 
 // Helper thay vì viết lại hàm tạo token

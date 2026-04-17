@@ -1,4 +1,4 @@
-const Product = require('../model/Product');
+const Product = require('../model/ProductModel.js');
 
 // @desc    Lấy danh sách sản phẩm (Có tìm kiếm, phân trang, lọc)
 // @route   GET /api/products
