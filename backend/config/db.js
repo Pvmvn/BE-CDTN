@@ -2,13 +2,12 @@ const mongoose = require('mongoose');
 
 const connectDB = async () => {
     try {
-        const conn = await mongoose.connect(process.env.MONGO_URI, {
-            // Mongoose 6+ default config is fine, removed deprecated options
-        });
-        console.log(`Đã kết nối MongoDB: ${conn.connection.host}`);
+        const conn = await mongoose.connect(process.env.MONGO_URI);
+        console.log(`Connected MongoDB: ${conn.connection.host}`);
+        return conn;
     } catch (error) {
-        console.error(`Lỗi kết nối MongoDB: ${error.message}`);
-        process.exit(1);
+        console.error(`MongoDB connection error: ${error.message}`);
+        throw error;
     }
 };
 
