@@ -1,34 +1,34 @@
-const Order = require('../model/OrderModel');
+import Order from '../model/order.model.js';
 
-const startOrderWatcher = () => {
-    if (process.env.ENABLE_ORDER_WATCHER === 'false') {
-        return null;
-    }
+export const watchOrders = (io) => {
+  try {
+    const changeStream = Order.watch();
 
-    const intervalMs = Number(process.env.ORDER_WATCHER_INTERVAL_MS || 60000);
-    const expirationMinutes = Number(process.env.ORDER_EXPIRATION_MINUTES || 30);
+    changeStream.on('change', async (change) => {
+      console.log('Order thay đổi:', change.operationType);
 
-    return setInterval(async () => {
-        try {
-            const cutoff = new Date(Date.now() - expirationMinutes * 60 * 1000);
-            await Order.updateMany(
-                {
-                    status: 'pending',
-                    paymentStatus: 'unpaid',
-                    createdAt: { $lte: cutoff }
-                },
-                {
-                    $set: {
-                        status: 'cancelled',
-                        cancelledAt: new Date(),
-                        cancelReason: 'Order expired before payment'
-                    }
-                }
-            );
-        } catch (error) {
-            console.error('Order watcher error:', error.message);
-        }
-    }, intervalMs);
+      const orderId = change.documentKey?._id;
+
+      // 🔥 Query lại đơn hàng + populate CHỈ các field yêu cầu
+      const populatedOrder = await Order.findById(orderId)
+        .populate("userId", "name email role")
+        .populate("voucherId", "code");
+
+      io.to('admin_room').emit('order_changed', {
+        type: change.operationType,
+        orderId,
+        data: populatedOrder,               // ⬅️ đã format giống API getOrders
+        updatedFields: change.updateDescription?.updatedFields,
+        timestamp: new Date()
+      });
+    });
+
+    changeStream.on('error', (error) => {
+      console.error('Change stream error:', error);
+    });
+
+    console.log('Đã bật realtime cho Order collection');
+  } catch (error) {
+    console.error('Không thể bật Change Stream:', error);
+  }
 };
-
-module.exports = startOrderWatcher;

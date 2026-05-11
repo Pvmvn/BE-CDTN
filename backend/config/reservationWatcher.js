@@ -1,49 +1,28 @@
-const Reservation = require('../model/ReservationModel');
+import Reservation from "../model/reservation.model.js";
 
-const startReservationWatcher = () => {
-    if (process.env.ENABLE_RESERVATION_WATCHER === 'false') {
-        return null;
-    }
+export const watchReservations = (io) => {
+  try {
+    const changeStream = Reservation.watch();
+    changeStream.on("change", async (change) => {
+      console.log("Reservation thay đổi:", change.operationType);
+      const reservationId = change.documentKey?._id;
+      const reservation = reservationId
+        ? await Reservation.findById(reservationId)
+        : null;
 
-    const intervalMs = Number(process.env.RESERVATION_WATCHER_INTERVAL_MS || 60000);
-
-    return setInterval(async () => {
-        try {
-            const now = new Date();
-
-            await Reservation.updateMany(
-                {
-                    status: 'pending',
-                    reservationTime: { $lte: now }
-                },
-                {
-                    $set: {
-                        status: 'expired'
-                    }
-                }
-            );
-
-            const confirmedReservations = await Reservation.find({
-                status: { $in: ['confirmed', 'seated'] }
-            });
-
-            await Promise.all(
-                confirmedReservations.map(async (reservation) => {
-                    const reservationEnd = new Date(
-                        new Date(reservation.reservationTime).getTime() +
-                            reservation.durationMinutes * 60 * 1000
-                    );
-
-                    if (reservationEnd <= now) {
-                        reservation.status = 'completed';
-                        await reservation.save();
-                    }
-                })
-            );
-        } catch (error) {
-            console.error('Reservation watcher error:', error.message);
-        }
-    }, intervalMs);
+      io.to("admin_room").emit("reservation_changed", {
+        type: change.operationType, // insert | update | delete
+        reservationId,
+        data: reservation,          // full document
+        updatedFields: change.updateDescription?.updatedFields,
+        timestamp: new Date(),
+      });
+    });
+    changeStream.on("error", (error) => {
+      console.error("Reservation Change Stream error:", error);
+    });
+    console.log("Đã bật realtime cho Reservation collection");
+  } catch (error) {
+    console.error("Không thể bật Change Stream Reservation:", error);
+  }
 };
-
-module.exports = startReservationWatcher;

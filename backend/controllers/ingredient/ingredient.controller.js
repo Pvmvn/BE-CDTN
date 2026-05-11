@@ -1,0 +1,146 @@
+import Ingredient from "../../model/ingredient.model.js";
+import Recipe from "../../model/recipe.model.js";
+import Product from "../../model/product.model.js"
+// Lấy tất cả nguyên liệu trong kho
+export const getAllIngredients = async (req, res) => {
+  try {
+    const ingredients = await Ingredient.find().sort({ createdAt: -1 });
+    res.status(200).json(ingredients);
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server", error });
+  }
+};
+// Thêm nguyên liệu mới
+export const createIngredient = async (req, res) => {
+  try {
+    const { name, unit } = req.body;
+
+    if (!name || !unit) {
+      return res.status(400).json({ message: "Thiếu dữ liệu bắt buộc" });
+    }
+
+    // check trùng
+    const exist = await Ingredient.findOne({ name: name.trim() });
+    if (exist) {
+      return res.status(400).json({ message: "Tên nguyên liệu đã tồn tại" });
+    }
+
+    const ingredient = await Ingredient.create({
+      name: name.trim(),
+      unit,
+      quantity: 0,
+      lastPrice: 0,
+      totalCost: 0,
+    });
+
+    res.status(201).json(ingredient);
+  } catch (err) {
+    res.status(500).json({ message: "Lỗi server", error: err });
+  }
+};
+
+
+// Cập nhập trạng thái nguyên liệu trong kho
+export const toggleIngredientStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const ingredient = await Ingredient.findById(id);
+    if (!ingredient) return res.status(404).json({ message: "Không tìm thấy nguyên liệu" });
+
+    const currentStatus = ingredient.status;
+    let newStatus;
+
+    if (currentStatus === false) {
+      // Click từ false -> true
+      if (ingredient.quantity <= 0) {
+        return res.status(400).json({ message: "Nguyên liệu đã hết phải nhập thêm" });
+      }
+      newStatus = true;
+
+      // Chỉ bật nguyên liệu, không cập nhật sản phẩm
+      await Ingredient.findByIdAndUpdate(id, { status: true });
+
+    } else {
+      // Click từ true -> false
+      newStatus = false;
+
+      // Tắt nguyên liệu
+      await Ingredient.findByIdAndUpdate(id, { status: false });
+
+      // Tìm tất cả công thức có chứa nguyên liệu này
+      const recipes = await Recipe.find({ "items.ingredientId": id });
+      const productIds = recipes.map(r => r.productId);
+
+      // Tắt tất cả sản phẩm liên quan
+      await Product.updateMany(
+        { _id: { $in: productIds } },
+        { $set: { status: false } }
+      );
+    }
+
+    res.json({ message: "Cập nhật trạng thái thành công", newStatus });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Lỗi server", error });
+  }
+};
+
+// Sửa nguyên liệu
+export const updateIngredient = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, unit } = req.body;
+
+    // Kiểm tra dữ liệu
+    if (!name || !unit) {
+      return res.status(400).json({ message: "Thiếu dữ liệu bắt buộc (name, unit)" });
+    }
+
+    // Check tên trùng với nguyên liệu khác
+    const existingIngredient = await Ingredient.findOne({
+      name: name.trim(),
+      _id: { $ne: id }
+    });
+
+    if (existingIngredient) {
+      return res.status(400).json({ message: "Tên nguyên liệu đã tồn tại" });
+    }
+
+    const ingredient = await Ingredient.findById(id);
+    if (!ingredient) {
+      return res.status(404).json({ message: "Không tìm thấy nguyên liệu" });
+    }
+
+    // Chỉ cho phép update name, unit
+    ingredient.name = name.trim();
+    ingredient.unit = unit;
+
+    await ingredient.save();
+
+    res.status(200).json(ingredient);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Lỗi server", error });
+  }
+};
+
+// Xóa nguyên liệu
+export const deleteIngredient = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const isUsed = await Recipe.exists({ "items.ingredientId": id });
+    if (isUsed) {
+      return res.status(400).json({
+        message: "Không thể xóa nguyên liệu này vì đang được sử dụng trong công thức",
+      });
+    }
+
+    const deleted = await Ingredient.findByIdAndDelete(id);
+    if (!deleted)
+      return res.status(404).json({ message: "Không tìm thấy nguyên liệu" });
+
+    res.status(200).json({ message: "Xóa thành công" });
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server", error });
+  }
+};

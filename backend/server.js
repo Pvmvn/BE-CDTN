@@ -1,49 +1,87 @@
-const express = require('express');
-const cors = require('cors');
-require('dotenv').config();
-const connectDB = require('./config/db');
-const startOrderWatcher = require('./config/orderWatcher');
-const startReservationWatcher = require('./config/reservationWatcher');
+import express from 'express';
+import dotenv from 'dotenv';
+import cors from "cors";
+import http from "http";
+import { Server } from "socket.io";
+import { connectDB } from './config/db.js';
+import { watchOrders } from './config/orderWatcher.js';
+import { watchReservations } from './config/reservationWatcher.js';
+import authRouter from './router/auth.router.js';
+import blogCategoryRouter from './router/blogCategory.router.js';
+import blogRouter from './router/blog.router.js';
+import productCategoryRouter from './router/productCategory.router.js';
+import productRouter from './router/product.router.js';
+import ingredientRouter from './router/ingredient.router.js';
+import recipeRouter from './router/recipe.router.js';
+import cartRouter from './router/cart.router.js';
+import orderRouter from './router/order.router.js';
+import userRouter from './router/user.router.js';
+import voucherRouter from './router/voucher.router.js';
+import contactRouter from './router/contact.router.js';
+import paymentRouter from './router/payment.router.js';
+import importReceiptRouter from './router/importReceipt.router.js';
+import reserVationRouter from './router/reservation.router.js';
+dotenv.config();
 
 const app = express();
+const server = http.createServer(app); 
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cors());
-
-app.use('/api/auth', require('./router/authRouter'));
-app.use('/api/users', require('./router/userRouter'));
-app.use('/api/categories', require('./router/categoryRouter'));
-app.use('/api/products', require('./router/productRouter'));
-app.use('/api/carts', require('./router/cartRouter'));
-app.use('/api/orders', require('./router/orderRouter'));
-app.use('/api/payments', require('./router/paymentRouter'));
-app.use('/api/reservations', require('./router/reservationRouter'));
-app.use('/api/vouchers', require('./router/voucherRouter'));
-app.use('/api/contacts', require('./router/contactRouter'));
-app.use('/api/blogs', require('./router/blogRouter'));
-app.use('/api/ingredients', require('./router/ingredientRouter'));
-app.use('/api/recipes', require('./router/recipeRouter'));
-
-app.get('/', (req, res) => {
-    res.send('Cafe management API is running');
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+  },
 });
 
-const PORT = process.env.PORT || 8080;
+// Middleware để inject io vào req
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
 
-const startServer = async () => {
-    try {
-        await connectDB();
+app.use(express.json());
+app.use(cors());
 
-        app.listen(PORT, () => {
-            console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
-            startOrderWatcher();
-            startReservationWatcher();
-        });
-    } catch (error) {
-        console.error(`Failed to start server: ${error.message}`);
-        process.exit(1);
-    }
-};
+// ---- Router ----
+app.use("/api/auth", authRouter);
+app.use("/api/blog-categories", blogCategoryRouter);
+app.use("/api/blogs", blogRouter);
+app.use("/api/product-categories", productCategoryRouter);
+app.use("/api/products", productRouter);
+app.use("/api/ingredients", ingredientRouter);
+app.use("/api/recipes", recipeRouter);
+app.use("/api/carts", cartRouter);
+app.use("/api/orders", orderRouter);
+app.use("/api/users", userRouter);
+app.use("/api/vouchers", voucherRouter);
+app.use("/api/contacts", contactRouter);
+app.use("/api/payment", paymentRouter);
+app.use("/api/import-receipts", importReceiptRouter);
+app.use("/api/reservations", reserVationRouter);
 
-startServer();
+// ---- Socket.IO logic ----
+io.on("connection", (socket) => {
+  console.log("Client connected:", socket.id);
+
+  socket.on("join_admin", () => { 
+    socket.join("admin_room");
+    console.log("Admin joined:", socket.id);
+  });
+
+  // socket.on("join_user", (userId) => {
+  //   socket.join(`user_${userId}`);
+  //   console.log(`User ${userId} joined:`, socket.id);
+  // });
+
+  socket.on("disconnect", () => {
+    console.log("Client disconnected:", socket.id);
+  });
+});
+
+// ---- Start server ----
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, async () => {
+  await connectDB();
+  watchOrders(io); 
+  watchReservations(io);
+  console.log(`Server started at http://localhost:${PORT}`);
+});

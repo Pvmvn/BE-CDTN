@@ -1,21 +1,9 @@
-const pad = (value) => String(value).padStart(2, '0');
-
-const formatDateVNPay = (date = new Date()) => {
-    return [
-        date.getFullYear(),
-        pad(date.getMonth() + 1),
-        pad(date.getDate()),
-        pad(date.getHours()),
-        pad(date.getMinutes()),
-        pad(date.getSeconds())
-    ].join('');
-};
-
-const createVNPayTxnRef = (prefix = 'ORD') => {
-    return `${prefix}${Date.now()}`;
-};
-
-module.exports = {
-    formatDateVNPay,
-    createVNPayTxnRef
+export const formatDate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+  return `${year}${month}${day}${hours}${minutes}${seconds}`;
 };
