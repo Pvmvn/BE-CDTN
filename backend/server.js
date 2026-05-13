@@ -1,5 +1,5 @@
+import 'dotenv/config';
 import express from 'express';
-import dotenv from 'dotenv';
 import cors from "cors";
 import http from "http";
 import { Server } from "socket.io";
@@ -21,7 +21,6 @@ import contactRouter from './router/contact.router.js';
 import paymentRouter from './router/payment.router.js';
 import importReceiptRouter from './router/importReceipt.router.js';
 import reserVationRouter from './router/reservation.router.js';
-dotenv.config();
 
 const app = express();
 const server = http.createServer(app); 

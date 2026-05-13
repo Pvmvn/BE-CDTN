@@ -8,8 +8,8 @@ import Ingredient from "../../model/ingredient.model.js";
 import Cart from "../../model/cart.model.js";
 
 const vnpay = new VNPay({
-  tmnCode: "6Z3TSPO9",
-  secureSecret: "40YYRRUMS9DEF74CWS38QO5DL68TOUI5",
+  tmnCode: process.env.VNP_TMNCODE,
+  secureSecret: process.env.VNP_HASHSECRET,
   vnpayHost: "https://sandbox.vnpayment.vn",
   testMode: true,
   hashAlgorithm: "SHA512",
