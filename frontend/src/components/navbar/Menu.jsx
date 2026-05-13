@@ -1,0 +1,13 @@
+import React from "react";
+import { Link } from "react-router-dom";
+const Menu = () => {
+  return (
+    <div>
+      <Link to='/menu'>
+       <span className="hover:text-green-700 cursor-pointer">THỰC ĐƠN</span>
+      </Link>
+    </div>
+  );
+};
+
+export default Menu;
