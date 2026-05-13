@@ -3,6 +3,7 @@ import Order from "../../model/order.model.js";
 import Product from "../../model/product.model.js";
 import Recipe from "../../model/recipe.model.js";
 import Ingredient from "../../model/ingredient.model.js";
+import Voucher from "../../model/voucher.model.js";
 
 // Tạo orderOffline 
 export const createOrderOffline = async (req, res) => {
@@ -266,5 +267,112 @@ export const completeOrder = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: "Xác nhận hoàn thành đơn hàng thất bại" });
     console.log(err);
+  }
+};
+
+// Xác nhận thanh toán (chỉ dành cho đơn hàng tiền mặt/COD)
+export const confirmPaymentOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const order = await Order.findById(id);
+    if (!order) {
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    }
+    
+    // Đã thanh toán thì không cần xác nhận lại
+    if (order.paymentStatus === "SUCCESS") {
+      return res.status(400).json({ message: "Đơn hàng đã được thanh toán" });
+    }
+    
+    order.paymentStatus = "SUCCESS";
+    // Có thể lưu lại thời điểm xác nhận thanh toán nếu muốn
+    order.vnp_PayDate = new Date().toISOString(); 
+    await order.save();
+    
+    const updatedOrder = await Order.findById(id)
+      .populate("userId", "name email role")
+      .populate("voucherId", "code");
+    res.json(updatedOrder);
+  } catch (err) {
+    res.status(500).json({ message: "Xác nhận thanh toán thất bại" });
+    console.log(err);
+  }
+};
+
+// Hủy đơn hàng (Admin/Manager)
+export const cancelOrder = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { id } = req.params;
+    const order = await Order.findById(id).session(session);
+
+    if (!order) {
+      await session.abortTransaction();
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    }
+
+    if (order.status === "COMPLETED" || order.status === "CANCELLED") {
+      await session.abortTransaction();
+      return res.status(400).json({ 
+        message: "Không thể hủy đơn hàng đã hoàn tất hoặc đã hủy" 
+      });
+    }
+
+    if (order.paymentMethod !== "CASH") {
+      await session.abortTransaction();
+      return res.status(400).json({
+        message: "Chỉ có thể hủy thủ công đơn hàng thanh toán tiền mặt",
+      });
+    }
+
+    // HOÀN LẠI NGUYÊN LIỆU THEO CÔNG THỨC
+    for (const item of order.items) {
+      const recipe = await Recipe.findOne({
+        productId: item.productId,
+      }).session(session);
+
+      if (recipe) {
+        for (const r of recipe.items) {
+          const requiredAmount = r.quantity * item.quantity;
+          await Ingredient.findByIdAndUpdate(
+            r.ingredientId,
+            {
+              $inc: { quantity: requiredAmount },
+              $set: { status: true },
+            },
+            { session }
+          );
+        }
+      }
+    }
+
+    order.status = "CANCELLED";
+    order.paymentStatus = "FAILED";
+
+    if (order.voucherId && order.paymentMethod === "CASH") {
+      await Voucher.findByIdAndUpdate(
+        order.voucherId,
+        { $inc: { usedCount: -1 } },
+        { session }
+      );
+    }
+
+    await order.save({ session });
+
+    await session.commitTransaction();
+
+    const updatedOrder = await Order.findById(id)
+      .populate("userId", "name email role")
+      .populate("voucherId", "code");
+      
+    res.status(200).json(updatedOrder);
+  } catch (err) {
+    await session.abortTransaction();
+    console.error("CANCEL ORDER ERROR:", err);
+    res.status(500).json({ message: "Hủy đơn hàng thất bại", error: err.message });
+  } finally {
+    session.endSession();
   }
 };

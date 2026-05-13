@@ -7,9 +7,11 @@ import { formatDatetimeVN } from "../../utils/formatDatetimeVN";
 import playTingSound from "../../utils/playTingSound";
 import { AiOutlineEye } from "react-icons/ai";
 import { BsClipboardCheckFill } from "react-icons/bs";
+import { FaMoneyBillWave, FaTimesCircle } from "react-icons/fa";
 import { FiRefreshCw } from "react-icons/fi";
 import ModalOrderDetail from "../../components/modal/adminOrders/ModalDetailOrder";
 import ModalConfirmCompleteOrder from "../../components/modal/adminOrders/ModalConfirmCompleteOrder";
+import ModalConfirm from "../../components/modal/adminReservation/ModalConfirm";
 
 export default function Orders() {
   const [orders, setOrders] = useState([]);
@@ -17,6 +19,7 @@ export default function Orders() {
   const [isOpenModalDetail, setIsOpenModalDetail] = useState(false);
   const [orderData, setOrderData] = useState(null);
   const [isOpenConfirmComplete, setIsOpenConfirmComplete] = useState(false);
+  const [isOpenConfirmCancel, setIsOpenConfirmCancel] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -81,22 +84,7 @@ export default function Orders() {
         toast.success(`Đơn ${orderType} mới - ${statusText}!`);
       } else if (change.type === "update") {
         setOrders((prev) =>
-          prev.map((o) => {
-            if (o._id === change.orderId) {
-              if (change.updatedFields.paymentStatus === "FAILED") {
-                return { ...o, paymentStatus: "FAILED", status: "CANCELLED" };
-              } else if (change.updatedFields.paymentStatus === "SUCCESS") {
-                return {
-                  ...o,
-                  paymentStatus: "SUCCESS",
-                  vnp_Amount: change.data.vnp_Amount,
-                  vnp_PayDate: change.data.vnp_PayDate,
-                  vnp_TransactionNo: change.data.vnp_TransactionNo,
-                };
-              }
-            }
-            return o;
-          })
+          prev.map((o) => (o._id === change.orderId ? change.data : o))
         );
       } else if (change.type === "delete") {
         setOrders((prev) => prev.filter((o) => o._id !== change.orderId));
@@ -160,7 +148,7 @@ export default function Orders() {
     try {
       const res = await orderApi.completeOrder(orderId);
       setOrders((prev) =>
-        prev.map((o) => (o._id === orderId ? { ...o, status: res.status } : o))
+        prev.map((o) => (o._id === orderId ? { ...o, status: res.status, paymentStatus: res.paymentStatus } : o))
       );
       toast.success("Đơn hàng đã hoàn thành");
     } catch (err) {
@@ -169,6 +157,36 @@ export default function Orders() {
       );
     } finally {
       setIsOpenConfirmComplete(false);
+    }
+  };
+
+  const handleConfirmPayment = async (orderId) => {
+    if (!window.confirm("Bạn xác nhận đã thu tiền từ khách hàng cho đơn này?")) return;
+    try {
+      const res = await orderApi.confirmPayment(orderId);
+      setOrders((prev) =>
+        prev.map((o) => (o._id === orderId ? { ...o, paymentStatus: res.paymentStatus } : o))
+      );
+      toast.success("Xác nhận thanh toán thành công");
+    } catch (err) {
+      toast.error(
+        err.response?.data?.message || "Lỗi khi cập nhật thanh toán"
+      );
+    }
+  };
+
+  const handleCancelOrder = async (orderId) => {
+    try {
+      const res = await orderApi.cancelOrder(orderId);
+      setOrders((prev) =>
+        prev.map((o) => (o._id === orderId ? res : o))
+      );
+      toast.success("Đã hủy đơn hàng và hoàn nguyên liệu vào kho");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Lỗi khi hủy đơn hàng");
+    } finally {
+      setIsOpenConfirmCancel(false);
+      setOrderData(null);
     }
   };
 
@@ -468,6 +486,17 @@ const handleQuickDate = (type) => {
                     >
                       <AiOutlineEye className="w-6 h-6" />
                     </button>
+                    {order.paymentMethod === "CASH" && 
+                     order.paymentStatus === "PENDING" && 
+                     order.status === "PROCESSING" && (
+                        <button
+                          className="text-yellow-600 hover:text-yellow-800 transition-colors cursor-pointer"
+                          title="Xác nhận đã thu tiền"
+                          onClick={() => handleConfirmPayment(order._id)}
+                        >
+                          <FaMoneyBillWave className="w-6 h-6" />
+                        </button>
+                    )}
                     {order.paymentStatus === "SUCCESS" &&
                       order.status === "PROCESSING" && (
                         <button
@@ -481,6 +510,19 @@ const handleQuickDate = (type) => {
                           <BsClipboardCheckFill className="w-5 h-5" />
                         </button>
                       )}
+                    {order.paymentMethod === "CASH" &&
+                      order.status === "PROCESSING" && (
+                      <button
+                        className="text-red-600 hover:text-red-800 transition-colors cursor-pointer"
+                        title="Hủy đơn hàng"
+                        onClick={() => {
+                          setOrderData(order);
+                          setIsOpenConfirmCancel(true);
+                        }}
+                      >
+                        <FaTimesCircle className="w-5 h-5" />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -515,6 +557,20 @@ const handleQuickDate = (type) => {
           setIsOpenConfirmComplete={setIsOpenConfirmComplete}
           orderData={orderData}
           onConfirm={() => handleCompleteOrder(orderData._id)}
+        />
+      )}
+      {isOpenConfirmCancel && orderData && (
+        <ModalConfirm
+          isOpen={isOpenConfirmCancel}
+          onClose={() => {
+            setIsOpenConfirmCancel(false);
+            setOrderData(null);
+          }}
+          onConfirm={() => handleCancelOrder(orderData._id)}
+          title="Hủy đơn hàng"
+          content={`Hủy đơn #${orderData._id?.slice(-8)}? Nguyên liệu của đơn sẽ được cộng trả vào kho.`}
+          confirmText="Hủy đơn"
+          confirmColor="orange"
         />
       )}
     </div>

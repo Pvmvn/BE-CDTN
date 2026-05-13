@@ -269,6 +269,7 @@ export default function Reservations() {
                 "SĐT",
                 "Ngày đặt",
                 "Giờ đặt",
+                "Số bàn",
                 "Số người",
                 "Trạng thái",
                 "Thao tác",
@@ -297,6 +298,7 @@ export default function Reservations() {
                   <td className="px-6 py-4">{r.phone}</td>
                   <td className="px-6 py-4">{formatDate(r.date)}</td>
                   <td className="px-6 py-4">{r.time}</td>
+                  <td className="px-6 py-4">{r.tableNumber || "-"}</td>
                   <td className="px-6 py-4">{r.people}</td>
                   <td className="px-6 py-4">
                     <span

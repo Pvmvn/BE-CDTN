@@ -44,6 +44,7 @@ function getDeliverySlots() {
 const ReservationPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [assignedTableNumber, setAssignedTableNumber] = useState(null);
 
   // Generate time slots
   const timeSlots = useMemo(() => getDeliverySlots(), []);
@@ -92,8 +93,9 @@ const ReservationPage = () => {
         note: data.note || "",
       };
 
-      await reservationApi.create(payload);
+      const reservation = await reservationApi.create(payload);
 
+      setAssignedTableNumber(reservation.tableNumber);
       setIsSuccess(true);
       reset({
         name: "",
@@ -108,6 +110,7 @@ const ReservationPage = () => {
       // Reset success state sau 5s
       setTimeout(() => {
         setIsSuccess(false);
+        setAssignedTableNumber(null);
       }, 5000);
     } catch (error) {
       toast.error(
@@ -392,6 +395,11 @@ const ReservationPage = () => {
                       <p className="text-sm text-green-600 mt-1">
                         Chúng tôi sẽ giữ bàn cho bạn. Cảm ơn bạn đã tin tưởng!
                       </p>
+                      {assignedTableNumber && (
+                        <p className="text-sm font-semibold text-green-700 mt-1">
+                          Số bàn của bạn: Bàn {assignedTableNumber}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>

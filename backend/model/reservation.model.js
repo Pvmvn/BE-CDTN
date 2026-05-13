@@ -42,6 +42,12 @@ const reservationSchema = new mongoose.Schema(
       max: 20,
     },
 
+    tableNumber: {
+      type: Number,
+      min: 1,
+      max: 24,
+    },
+
     note: {
       type: String,
       default: "",

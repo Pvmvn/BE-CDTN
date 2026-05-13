@@ -41,7 +41,10 @@ const scheduleOrderCancellation = async (orderId) => {
               const requiredAmount = r.quantity * item.quantity;
               await Ingredient.findByIdAndUpdate(
                 r.ingredientId,
-                { $inc: { quantity: requiredAmount } },
+                {
+                  $inc: { quantity: requiredAmount },
+                  $set: { status: true },
+                },
                 { session }
               );
             }
@@ -67,7 +70,7 @@ export const createPayment = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const { cartItems, userId, delivery, voucher } = req.body;
+    const { cartItems, userId, delivery, voucher, paymentMethod = "VNPAY" } = req.body;
     // VALIDATE
     if (!delivery || !delivery.name || !delivery.phone) {
       return res.status(400).json({
@@ -189,7 +192,7 @@ export const createPayment = async (req, res) => {
         deliveryTime: delivery.deliveryTime || "Càng sớm càng tốt", // THÊM DÒNG NÀY
       },
       orderType: "ONLINE",
-      paymentMethod: "VNPAY",
+      paymentMethod: paymentMethod,
       totalPrice: total,
       paymentStatus: "PENDING",
     });
@@ -199,6 +202,29 @@ export const createPayment = async (req, res) => {
 
     // COMMIT
     await session.commitTransaction();
+
+    if (paymentMethod === "CASH") {
+      // Cập nhật voucher nếu có
+      if (voucher && voucher.voucherId) {
+        await Voucher.findByIdAndUpdate(
+          voucher.voucherId,
+          { $inc: { usedCount: 1 } },
+          { session: null } // using null session since we already committed, or just independent update
+        );
+      }
+
+      // CLEAR CART
+      await Cart.findOneAndUpdate(
+        { userId: userId },
+        { $set: { items: [] } },
+        { session: null }
+      );
+
+      return res.status(200).json({
+        success: true,
+        orderId: newOrder._id,
+      });
+    }
 
     // Tự động hủy nếu quá hạn thanh toán
     scheduleOrderCancellation(newOrder._id);
@@ -275,7 +301,10 @@ export const handleVnpayReturn = async (req, res) => {
 
             await Ingredient.findByIdAndUpdate(
               r.ingredientId,
-              { $inc: { quantity: requiredAmount } },
+              {
+                $inc: { quantity: requiredAmount },
+                $set: { status: true },
+              },
               { session }
             );
           }

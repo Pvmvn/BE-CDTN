@@ -21,6 +21,7 @@ const CheckOut = () => {
   const [timeSlots, setTimeSlots] = useState([]);
   const [receiveMethod, setReceiveMethod] = useState("delivery");
   const [selectedTime, setSelectedTime] = useState(""); // THÊM STATE NÀY
+  const [paymentMethod, setPaymentMethod] = useState("VNPAY"); // Thêm state phương thức thanh toán
   const { cart, setCart } = useCartStore();
   const [itemUpdate, setItemUpdate] = useState();
   const [isOpenModalUpdateItem, setIsOpenModalUpdateItem] = useState(false);
@@ -146,14 +147,25 @@ const CheckOut = () => {
           name: data.name,
           phone: data.phoneNumber,
           note: data.deliveryNote || "",
-          deliveryTime: selectedTime, // THÊM DÒNG NÀY
+          deliveryTime: selectedTime,
         },
         voucher: voucherUsed,
         userId: user.id,
+        paymentMethod: paymentMethod, // Gửi lên backend
       };
       const response = await paymentApi.createPayment(orderData);
-      if (response.success && response.vnpUrl) {
-        window.location.href = response.vnpUrl;
+      
+      if (paymentMethod === "VNPAY") {
+        if (response.success && response.vnpUrl) {
+          window.location.href = response.vnpUrl;
+        }
+      } else if (paymentMethod === "CASH") {
+        if (response.success && response.orderId) {
+          setCart([]);
+          localStorage.setItem("cart", JSON.stringify([]));
+          toast.success("Đặt hàng thành công!");
+          navigate(`/payment-result?orderId=${response.orderId}`);
+        }
       }
     } catch (error) {
       console.error("Lỗi khi đặt hàng:", error);
@@ -282,36 +294,46 @@ const CheckOut = () => {
           <div className="pt-5">
             <p className="semibold text-xl py-2">Phương thức thanh toán</p>
             <hr className="w-[3rem] border-2 border-orange-600" />
-            <div className="flex items-center gap-x-10 pt-4">
-              <div className="checkbox-wrapper">
-                <input checked={true} type="checkbox" />
-                <svg viewBox="0 0 35.6 35.6" width="25" height="25">
-                  <circle
-                    className="background"
-                    cx="17.8"
-                    cy="17.8"
-                    r="17.8"
-                  ></circle>
-                  <circle
-                    className="stroke"
-                    cx="17.8"
-                    cy="17.8"
-                    r="10.37"
-                  ></circle>
-                  <polyline
-                    className="check"
-                    points="11.78 18.12 15.55 22.23 25.17 12.87"
-                  ></polyline>
-                </svg>
+            <div className="flex flex-col gap-y-4 pt-4">
+              
+              {/* Option VNPAY */}
+              <div 
+                className="flex items-center gap-x-10 cursor-pointer"
+                onClick={() => setPaymentMethod("VNPAY")}
+              >
+                <div className="checkbox-wrapper">
+                  <input readOnly checked={paymentMethod === "VNPAY"} type="checkbox" />
+                  <svg viewBox="0 0 35.6 35.6" width="25" height="25">
+                    <circle className="background" cx="17.8" cy="17.8" r="17.8"></circle>
+                    <circle className="stroke" cx="17.8" cy="17.8" r="10.37"></circle>
+                    <polyline className="check" points="11.78 18.12 15.55 22.23 25.17 12.87"></polyline>
+                  </svg>
+                </div>
+                <div className="flex items-center">
+                  <img src="logo-vnpay.png" className="h-6 w-10 object-cover" alt="vnpay" />
+                  <p className="text-lg font-light ml-2">VNPAY</p>
+                </div>
               </div>
-              <div className="flex items-center">
-                <img
-                  src="logo-vnpay.png"
-                  className="h-6 w-10 object-cover"
-                  alt="vnpay"
-                />
-                <p className="text-lg font-light">VNPAY</p>
+
+              {/* Option CASH */}
+              <div 
+                className="flex items-center gap-x-10 cursor-pointer"
+                onClick={() => setPaymentMethod("CASH")}
+              >
+                <div className="checkbox-wrapper">
+                  <input readOnly checked={paymentMethod === "CASH"} type="checkbox" />
+                  <svg viewBox="0 0 35.6 35.6" width="25" height="25">
+                    <circle className="background" cx="17.8" cy="17.8" r="17.8"></circle>
+                    <circle className="stroke" cx="17.8" cy="17.8" r="10.37"></circle>
+                    <polyline className="check" points="11.78 18.12 15.55 22.23 25.17 12.87"></polyline>
+                  </svg>
+                </div>
+                <div className="flex items-center">
+                  <img src="delivery.png" className="h-6 w-10 object-cover" alt="cash" />
+                  <p className="text-lg font-light ml-2">Thanh toán trực tiếp</p>
+                </div>
               </div>
+
             </div>
           </div>
         </div>

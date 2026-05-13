@@ -24,6 +24,14 @@ const orderApi = {
   completeOrder: async (id) => {
     const res = await axiosClient.patch(`/orders/${id}/complete`);
     return res.data;
+  },
+  confirmPayment: async (id) => {
+    const res = await axiosClient.patch(`/orders/${id}/confirm-payment`);
+    return res.data;
+  },
+  cancelOrder: async (id) => {
+    const res = await axiosClient.patch(`/orders/${id}/cancel`);
+    return res.data;
   }
 }
 export default orderApi

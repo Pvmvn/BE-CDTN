@@ -1,5 +1,7 @@
 import Reservation from "../../model/reservation.model.js";
 
+const MAX_TABLES = 24;
+
 // GET ALL với date filter (mặc định hôm nay)
 export const getAllReservations = async (req, res) => {
   try {
@@ -71,6 +73,31 @@ export const createReservation = async (req, res) => {
       return res.status(400).json({ message: "Không thể đặt giờ trong quá khứ" });
     }
 
+    const activeReservations = await Reservation.find({
+      date,
+      time,
+      status: { $ne: "CANCELLED" },
+    }).select("tableNumber");
+
+    if (activeReservations.length >= MAX_TABLES) {
+      return res.status(400).json({ message: "Đã hết bàn cho khung giờ này" });
+    }
+
+    const usedTables = new Set(
+      activeReservations
+        .map((item) => item.tableNumber)
+        .filter((tableNumber) => Number.isInteger(tableNumber))
+    );
+
+    let tableNumber = 1;
+    while (usedTables.has(tableNumber) && tableNumber <= MAX_TABLES) {
+      tableNumber += 1;
+    }
+
+    if (tableNumber > MAX_TABLES) {
+      return res.status(400).json({ message: "Đã hết bàn cho khung giờ này" });
+    }
+
     const reservation = await Reservation.create({
       name,
       phone,
@@ -79,6 +106,7 @@ export const createReservation = async (req, res) => {
       time,
       reservationTime,
       people,
+      tableNumber,
       note,
       status: "PENDING",
     });
