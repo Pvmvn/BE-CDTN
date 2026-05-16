@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import Masonry from "react-masonry-css";
 import blogCategoryApi from "../../api/blogCategoryApi";
 import { toast } from "react-toastify";
@@ -8,8 +8,17 @@ import { motion } from "framer-motion";
 import BlogCard from "../../components/BlogCard";
 import { Parallax } from "react-scroll-parallax";
 
+const legacyCategorySlugs = {
+  coffeeholic: "coffeechill",
+  teaholic: "teachill",
+  teahoilic: "teachill",
+};
+
+const MotionDiv = motion.div;
+
 const NewsPage = () => {
   const { categorySlug } = useParams();
+  const navigate = useNavigate();
   const [blogcategories, setBlogCategories] = useState([]);
   const [blogs, setBlogs] = useState([]);
   useEffect(() => {
@@ -28,6 +37,8 @@ const NewsPage = () => {
   }, []);
   
   useEffect(() => {
+    if (legacyCategorySlugs[categorySlug]) return;
+
     const fetchBlogsByCategorySlug = async () => {
       try {
         const data = await blogApi.getByCategory(categorySlug);
@@ -38,6 +49,12 @@ const NewsPage = () => {
     };
     fetchBlogsByCategorySlug();
   }, [categorySlug]);
+
+  useEffect(() => {
+    if (legacyCategorySlugs[categorySlug]) {
+      navigate(`/blogs/${legacyCategorySlugs[categorySlug]}`, { replace: true });
+    }
+  }, [categorySlug, navigate]);
   
   const currentCategory = blogcategories.find(
     (category) => category.slug === categorySlug
@@ -103,7 +120,7 @@ const NewsPage = () => {
           {blogs &&
             blogs.length > 0 &&
             blogs.map((blog, index) => (
-              <motion.div
+              <MotionDiv
                 key={blog._id}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -119,7 +136,7 @@ const NewsPage = () => {
                   fromNewsPage={true}
                   categorySlug={categorySlug}
                 />
-              </motion.div>
+              </MotionDiv>
             ))}
         </Masonry>
       </div>

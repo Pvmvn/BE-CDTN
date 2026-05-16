@@ -77,6 +77,11 @@ export default function Ingredients() {
     setIsOpenModalUpdateIngredient(true);
   };
 
+  const getAveragePrice = (ingredient) => {
+    if (!ingredient?.quantity) return 0;
+    return (ingredient.totalCost ?? 0) / ingredient.quantity;
+  };
+
   return (
     <div className="w-full mx-auto bg-white rounded-lg shadow-sm">
       {/* Header */}
@@ -122,7 +127,7 @@ export default function Ingredients() {
                 "Tên nguyên liệu",
                 "Số lượng",
                 "Tổng tiền",
-                "Đơn giá nguyên liệu mới nhất",
+                "Đơn giá trung bình",
                 "Tình trạng",
                 "Thao tác",
               ].map((head) => (
@@ -168,7 +173,7 @@ export default function Ingredients() {
                   </td>
 
                   <td className="px-6 py-4 text-sm max-w-[160px]">
-                    {formatCurrencyVN(ingredient.lastPrice ?? 0)} / 1{ingredient.unit}
+                    {formatCurrencyVN(getAveragePrice(ingredient))} / 1{ingredient.unit}
                   </td>
 
                   {/* Toggle trạng thái */}

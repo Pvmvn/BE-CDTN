@@ -26,7 +26,7 @@ export const createBlog = async (req, res) => {
 export const getAllBlogs = async (req, res) => {
   try {
     const blogs = await Blog.find()
-      .populate("categoryId", "name")
+      .populate("categoryId", "name slug")
       .sort({ createdAt: -1 });
     res.json(blogs);
   } catch (err) {
@@ -64,7 +64,7 @@ export const getBlogBySlug = async (req, res) => {
     const blog = await Blog.findOne({
       slug,
       categoryId: category._id,
-    }).populate("categoryId", "name");
+    }).populate("categoryId", "name slug");
 
     if (!blog) {
       return res.status(404).json({ message: "Không tìm thấy blog" });
@@ -94,7 +94,7 @@ export const getBlogsByCategory = async (req, res) => {
 
     // Lấy blog theo categoryId
     const blogs = await Blog.find({ categoryId: category._id })
-      .populate("categoryId", "name")
+      .populate("categoryId", "name slug")
       .sort({ createdAt: -1 });
 
     res.json(blogs);

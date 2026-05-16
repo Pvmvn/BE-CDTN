@@ -78,8 +78,7 @@ const AboutMePage = () => {
       <div className="flex max-lg:flex-col max-lg:text-center max-lg:items-center px-20 max-md:px-4 gap-x-10 pt-10">
         <div className="flex-1 space-y-6 lg:hidden">
           <h3 className="text-4xl max-sm:xl font-bold">
-            ☕ Nguyên bản từ hành trình của hạt cà phê – chân thật như chính
-            “Go”
+            ☕ Nguyên bản từ hành trình của hạt cà phê
           </h3>
           <p className="text-xl font-md">
             Three Star tin rằng, giá trị thật nằm ở những khoảnh khắc kết nối.
@@ -135,8 +134,7 @@ const AboutMePage = () => {
         </div>
         <div className="flex-1 space-y-6 max-lg:hidden">
           <h3 className="text-4xl max-sm:xl font-bold">
-            ☕ Nguyên bản từ hành trình của hạt cà phê – chân thật như chính
-            “Star”
+            ☕ Nguyên bản từ hành trình của hạt cà phê 
           </h3>
           <p className="text-xl font-md ">
             Three Star tin rằng, giá trị thật nằm ở những khoảnh khắc kết nối.

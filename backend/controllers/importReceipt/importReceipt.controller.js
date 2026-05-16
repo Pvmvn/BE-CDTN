@@ -98,13 +98,15 @@ export const createExportReceipt = async (req, res) => {
         });
       }
 
+      const averagePrice = ing.quantity > 0 ? ing.totalCost / ing.quantity : 0;
+
       processedItems.push({
         ingredientId: ing._id,
         ingredientName: ing.name,
         unit: ing.unit,
         quantity: item.quantity,
-        pricePerUnit: ing.lastPrice || 0,
-        totalCost: (ing.lastPrice || 0) * item.quantity,
+        pricePerUnit: averagePrice,
+        totalCost: averagePrice * item.quantity,
       });
     }
 

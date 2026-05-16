@@ -7,6 +7,16 @@ import ModalCreateProduct from "../../components/modal/adminProduct/ModalCreateP
 import ModalConfirmDelete from "../../components/modal/ModalConfirmDelete";
 import ModalUpdateProduct from "../../components/modal/adminProduct/ModalUpdateProduct";
 
+const normalizeSearchText = (value = "") =>
+  value
+    .toString()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLowerCase()
+    .trim();
+
 export default function Products() {
   const [searchTerm, setSearchTerm] = useState("");
   const [products, setProducts] = useState([]);
@@ -129,7 +139,9 @@ export default function Products() {
           <tbody className="bg-white divide-y">
             {products
               .filter((p) =>
-                p.name.toLowerCase().includes(searchTerm.toLowerCase())
+                normalizeSearchText(p.name).includes(
+                  normalizeSearchText(searchTerm)
+                )
               )
               .map((product, index) => (
                 <tr key={product._id} className="hover:bg-gray-50">
