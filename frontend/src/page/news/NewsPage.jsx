@@ -8,12 +8,6 @@ import { motion } from "framer-motion";
 import BlogCard from "../../components/BlogCard";
 import { Parallax } from "react-scroll-parallax";
 
-const legacyCategorySlugs = {
-  coffeeholic: "coffeechill",
-  teaholic: "teachill",
-  teahoilic: "teachill",
-};
-
 const MotionDiv = motion.div;
 
 const NewsPage = () => {
@@ -21,6 +15,7 @@ const NewsPage = () => {
   const navigate = useNavigate();
   const [blogcategories, setBlogCategories] = useState([]);
   const [blogs, setBlogs] = useState([]);
+  const [isCategoryLoaded, setIsCategoryLoaded] = useState(false);
   useEffect(() => {
       document.title = `Tin tức`;
   }, []);
@@ -29,15 +24,32 @@ const NewsPage = () => {
       try {
         const data = await blogCategoryApi.getAll();
         setBlogCategories(data);
+        setIsCategoryLoaded(true);
+
+        const categoryExists = data.some(
+          (category) => category.slug === categorySlug
+        );
+        if (data.length > 0 && (!categorySlug || !categoryExists)) {
+          navigate(`/blogs/${data[0].slug}`, { replace: true });
+        }
       } catch (error) {
-        toast.error(error.response.data.message);
+        setIsCategoryLoaded(true);
+        toast.error(error.response?.data?.message || "Không tải được danh mục bài viết");
       }
     };
     fetchAllCategoryBlog();
-  }, []);
+  }, [categorySlug, navigate]);
   
   useEffect(() => {
-    if (legacyCategorySlugs[categorySlug]) return;
+    if (!isCategoryLoaded || !categorySlug) return;
+
+    const currentCategory = blogcategories.find(
+      (category) => category.slug === categorySlug
+    );
+    if (!currentCategory) {
+      setBlogs([]);
+      return;
+    }
 
     const fetchBlogsByCategorySlug = async () => {
       try {
@@ -48,13 +60,7 @@ const NewsPage = () => {
       }
     };
     fetchBlogsByCategorySlug();
-  }, [categorySlug]);
-
-  useEffect(() => {
-    if (legacyCategorySlugs[categorySlug]) {
-      navigate(`/blogs/${legacyCategorySlugs[categorySlug]}`, { replace: true });
-    }
-  }, [categorySlug, navigate]);
+  }, [blogcategories, categorySlug, isCategoryLoaded]);
   
   const currentCategory = blogcategories.find(
     (category) => category.slug === categorySlug

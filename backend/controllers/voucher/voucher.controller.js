@@ -138,6 +138,171 @@ export const createVoucher = async (req, res) => {
   }
 };
 
+// Cập nhật voucher
+export const updateVoucher = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      code,
+      description,
+      discountType,
+      discountValue,
+      startDate,
+      endDate,
+      image,
+      usageLimit,
+      perUserLimit,
+      applicableCategories = [],
+      minOrderValue,
+      maxDiscountAmount,
+    } = req.body;
+
+    const voucher = await Voucher.findById(id);
+    if (!voucher) {
+      return res.status(404).json({ message: "Voucher khong ton tai" });
+    }
+
+    const requiredFields = {
+      code: code?.trim(),
+      description: description?.trim(),
+      discountType: discountType?.trim(),
+      image: image?.trim(),
+      discountValue,
+      startDate,
+      endDate,
+      usageLimit,
+      perUserLimit,
+      minOrderValue,
+    };
+
+    for (const value of Object.values(requiredFields)) {
+      if (
+        value === undefined ||
+        value === null ||
+        (typeof value === "string" && value.trim() === "")
+      ) {
+        return res.status(400).json({
+          message: "Thieu thong tin bat buoc hoac thong tin chua hop le",
+        });
+      }
+    }
+
+    const codeRegex = /^[a-zA-Z0-9_-]{6,20}$/;
+    if (!codeRegex.test(code)) {
+      return res.status(400).json({
+        message:
+          "Ma voucher phai tu 6 den 20 ky tu, khong duoc chua dau hoac ky tu dac biet",
+      });
+    }
+
+    const existedVoucher = await Voucher.findOne({
+      code: code.toUpperCase(),
+      _id: { $ne: id },
+    });
+    if (existedVoucher) {
+      return res.status(400).json({ message: "Ma voucher da ton tai" });
+    }
+
+    if (!["amount", "percent"].includes(discountType)) {
+      return res.status(400).json({ message: "Loai giam gia khong hop le" });
+    }
+
+    if (discountValue <= 0) {
+      return res.status(400).json({
+        message: "Gia tri khuyen mai phai lon hon 0",
+      });
+    }
+
+    if (discountType === "percent" && (discountValue <= 0 || discountValue > 100)) {
+      return res.status(400).json({
+        message: "Giam phan tram phai tu 1 den 100",
+      });
+    }
+
+    if (usageLimit <= 0) {
+      return res.status(400).json({
+        message: "So luong ma phai lon hon 0",
+      });
+    }
+
+    if (perUserLimit <= 0) {
+      return res.status(400).json({
+        message: "So lan su dung toi da moi tai khoan phai lon hon 0",
+      });
+    }
+
+    if (usageLimit < perUserLimit) {
+      return res.status(400).json({
+        message:
+          "So lan su dung toi da moi tai khoan khong duoc lon hon so luong ma",
+      });
+    }
+
+    if (usageLimit < voucher.usedCount) {
+      return res.status(400).json({
+        message: "So luong ma khong duoc nho hon so luot da su dung",
+      });
+    }
+
+    if (minOrderValue < 0) {
+      return res.status(400).json({
+        message: "Gia tri don hang toi thieu khong duoc nho hon 0",
+      });
+    }
+
+    if (maxDiscountAmount != null && maxDiscountAmount <= 0) {
+      return res.status(400).json({
+        message: "Gia tri giam toi da phai lon hon 0",
+      });
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return res.status(400).json({ message: "Thoi gian khong hop le" });
+    }
+
+    if (start >= end) {
+      return res.status(400).json({
+        message: "Thoi gian bat dau phai nho hon thoi gian ket thuc",
+      });
+    }
+
+    if (end <= new Date()) {
+      return res.status(400).json({
+        message: "Thoi gian ket thuc phai lon hon hien tai",
+      });
+    }
+
+    voucher.code = code.toUpperCase();
+    voucher.description = description;
+    voucher.discountType = discountType;
+    voucher.discountValue = discountValue;
+    voucher.startDate = start;
+    voucher.endDate = end;
+    voucher.image = image;
+    voucher.usageLimit = usageLimit;
+    voucher.perUserLimit = perUserLimit;
+    voucher.conditions = {
+      minOrderValue,
+      applicableCategories,
+      maxDiscountAmount,
+    };
+
+    await voucher.save();
+
+    const populatedVoucher = await Voucher.findById(voucher._id).populate(
+      "conditions.applicableCategories",
+      "name"
+    );
+
+    return res.status(200).json(populatedVoucher);
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
 // Lấy danh sách voucher
 export const getVouchers = async (req, res) => {
   try {

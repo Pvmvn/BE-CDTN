@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import {
   Autoplay,
@@ -12,10 +12,6 @@ import "swiper/css/pagination";
 import "swiper/css/effect-creative";
 
 export default function Carousel({images}) {
-  const [activeIndex, setActiveIndex] = useState(0);
-
- 
-
   return (
     <div className="w-full h-full flex items-center justify-center p-4">
       <div className="w-full">
@@ -53,7 +49,6 @@ export default function Carousel({images}) {
               bulletClass: "swiper-pagination-bullet-custom",
               bulletActiveClass: "swiper-pagination-bullet-active-custom",
             }}
-            onSlideChange={(swiper) => setActiveIndex(swiper.realIndex)}
             className="travel-slider"
           >
             {images.map((item, idx) => (

@@ -9,6 +9,10 @@ const voucherApi = {
     const res = await axiosClient.post('/vouchers', data);
     return res.data;
   },
+  updateVoucher: async(id, data) => {
+    const res = await axiosClient.put(`/vouchers/${id}`, data);
+    return res.data;
+  },
   applyVoucher: async(data) => {
     const res = await axiosClient.post('/vouchers/check-voucher', data);
     return res.data;

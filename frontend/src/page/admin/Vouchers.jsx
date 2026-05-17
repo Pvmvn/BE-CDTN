@@ -9,12 +9,14 @@ import ModalCreateVoucher from "../../components/modal/adminVoucher/ModalCreateV
 import ModalConfirmDeativateVoucher from "../../components/modal/adminVoucher/ModalConfirmDeativateVoucher";
 import ModalConfirmDelete from "../../components/modal/ModalConfirmDelete";
 import { MdDelete } from "react-icons/md";
+import ModalUpdateVoucher from "../../components/modal/adminVoucher/ModalUpdateVoucher";
 export default function Vouchers() {
   const [searchTerm, setSearchTerm] = useState("");
   const [vouchers, setVouchers] = useState([]);
   const [isOpenModalCreateVoucher, setIsOpenModalCreateVoucher] =
     useState(false);
-  // const [isOpenModalUpdateProduct, setIsOpenModalUpdateProduct] = useState(false);
+  const [isOpenModalUpdateVoucher, setIsOpenModalUpdateVoucher] =
+    useState(false);
   const [
     isOpenModalConfirmDeativateVoucher,
     setIsOpenModalConfirmDeativateVoucher,
@@ -234,6 +236,16 @@ export default function Vouchers() {
                   <td className="px-6 py-4 text-sm">
                     <div className="flex items-center space-x-4">
                       <button
+                        className="text-blue-600 hover:text-blue-800 cursor-pointer"
+                        title="Sửa voucher"
+                        onClick={() => {
+                          setVoucherSelected(voucher);
+                          setIsOpenModalUpdateVoucher(true);
+                        }}
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
                         className="text-red-600 hover:text-red-800 cursor-pointer"
                         title="Vô hiệu hóa voucher"
                         onClick={() => {
@@ -264,6 +276,14 @@ export default function Vouchers() {
         <ModalCreateVoucher
           isOpenModalCreateVoucher={isOpenModalCreateVoucher}
           setIsOpenModalCreateVoucher={setIsOpenModalCreateVoucher}
+          setVouchers={setVouchers}
+        />
+      )}
+      {isOpenModalUpdateVoucher && voucherSelected && (
+        <ModalUpdateVoucher
+          isOpenModalUpdateVoucher={isOpenModalUpdateVoucher}
+          setIsOpenModalUpdateVoucher={setIsOpenModalUpdateVoucher}
+          selectedVoucher={voucherSelected}
           setVouchers={setVouchers}
         />
       )}

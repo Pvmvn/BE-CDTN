@@ -27,7 +27,7 @@ const OfflineOrderPage = () => {
       const data = await productApi.getAllProducts();
       // Chỉ lấy sản phẩm còn bán
       setProducts(data.filter((p) => p.status === true));
-    } catch (error) {
+    } catch {
       toast.error("Lỗi khi tải danh sách món");
     } finally {
       setLoading(false);
