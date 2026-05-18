@@ -41,6 +41,7 @@ import PaymentResult from "./page/paymentResult/PaymentResult";
 import ErrorPage from "./error/ErrorPage";
 
 // Admin pages
+import Dashboard from "./page/admin/Dashboard";
 import Users from "./page/admin/Users";
 import BlogCategory from "./page/admin/BlogCategory";
 import Blogs from "./page/admin/Blogs";
@@ -197,6 +198,7 @@ function App() {
               </AdminGuard>
             }
           >
+            <Route index element={<Dashboard />} />
             <Route
               path="users"
               element={

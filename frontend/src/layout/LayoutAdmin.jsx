@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Menu, Users, FileCog, PenSquare } from "lucide-react";
+import { Menu, Users, FileCog, PenSquare, LayoutDashboard } from "lucide-react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { MdWarehouse } from "react-icons/md";
 import { MdOutlineAppRegistration } from "react-icons/md";
@@ -15,7 +15,6 @@ export default function LayoutAdmin() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const location = useLocation();
   const activePath = location.pathname;
-  const isRootAdmin = activePath === "/admin";
 
   const { user } = useAuthStore();
   const isAdmin = user?.role === "admin";
@@ -46,6 +45,20 @@ export default function LayoutAdmin() {
         {/* Menu - Scrollable */}
         <div className="flex-1 overflow-y-auto">
           <ul className="space-y-3 mt-6 pb-6 px-3">
+            <li>
+              <Link
+                to="/admin"
+                className={`flex items-center px-3 py-3 rounded-lg transition-colors ${
+                  activePath === "/admin"
+                    ? "bg-green-50 text-green-600 border-l-4 border-green-600"
+                    : "text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                <LayoutDashboard className="w-5 h-5 mr-3 flex-shrink-0" />
+                <span>Dashboard</span>
+              </Link>
+            </li>
+
             {isAdmin && (
               <li>
                 <Link
@@ -240,18 +253,7 @@ export default function LayoutAdmin() {
 
         {/* Content */}
         <main className="flex-1 overflow-y-auto p-6">
-          {isRootAdmin ? (
-            <div className="flex flex-col items-center justify-center h-full text-center">
-              <h2 className="text-2xl font-semibold mb-2">
-                Chào mừng đến trang quản trị
-              </h2>
-              <p className="text-gray-500">
-                Hãy chọn một mục trong menu để bắt đầu quản lý.
-              </p>
-            </div>
-          ) : (
-            <Outlet />
-          )}
+          <Outlet />
         </main>
       </div>
     </div>
