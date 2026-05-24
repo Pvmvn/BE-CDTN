@@ -135,10 +135,10 @@ export default function ProductCategory() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-2xl font-bold text-gray-800">
-              Quản lý loại sản phẩm
+              Danh mục sản phẩm
             </h2>
             <p className="text-gray-600 mt-1">
-              Danh sách loại sản phẩm trên website
+              Danh sách danh mục sản phẩm trên website
             </p>
           </div>
           <button

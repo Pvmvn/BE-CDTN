@@ -10,6 +10,7 @@ import cartApi from "../../../api/cartApi";
 import useAuthStore from "../../../store/authStore";
 import useCartStore from "../../../store/cartStore";
 import { useLocation, useNavigate } from "react-router-dom";
+import { IoClose } from "react-icons/io5";
 const ModalDetailProduct = ({
   isOpenModalDetailProduct,
   setIsOpenModalDetailProduct,
@@ -20,7 +21,7 @@ const ModalDetailProduct = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [count, setCount] = useState(1);
   const charLimit = 80;
-  const description = productDetail.description || "";
+  const description = productDetail?.description || "";
   const shouldShowToggle = description.length > charLimit;
   const [isLoading, setIsLoading] = useState(false);
   const [note, setNote] = useState("");
@@ -76,18 +77,18 @@ const ModalDetailProduct = ({
   return (
     <Modal
       appElement={document.getElementById("root")}
-      isOpen={isOpenModalDetailProduct}
+      isOpen={isOpenModalDetailProduct && Boolean(productDetail)}
       onRequestClose={() => setIsOpenModalDetailProduct(false)}
       style={{
         overlay: {
-          backgroundColor: "rgba(0, 0, 0, 0.8)",
+          backgroundColor: "rgba(0, 0, 0, 0.45)",
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          zIndex: 50,
+          zIndex: 100,
         },
         content: {
-          top: "8rem",
+          top: "auto",
           left: "auto",
           right: "auto",
           bottom: "auto",
@@ -102,6 +103,13 @@ const ModalDetailProduct = ({
       }}
     >
       <div className="mx-auto overflow-hidden rounded-md w-full flex flex-col p-4 gap-y-4">
+        <button
+          type="button"
+          className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-black text-white flex items-center justify-center hover:bg-red-500"
+          onClick={() => setIsOpenModalDetailProduct(false)}
+        >
+          <IoClose className="text-xl" />
+        </button>
         <div className="w-full flex gap-x-4">
           <img
             src={productDetail.image}

@@ -84,7 +84,7 @@ export default function ImportReceipts() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-2xl font-bold text-gray-800">
-              Quản lý phiếu nhập/xuất kho
+              Nhập/Xuất kho
             </h2>
             <p className="text-gray-600 mt-1">
               Danh sách phiếu nhập/xuất kho ({receipts.length} phiếu)

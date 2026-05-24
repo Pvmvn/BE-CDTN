@@ -8,12 +8,25 @@ import { Link } from "react-router-dom";
 import ModalDetailProduct from "../../components/modal/customerProduct/ModalDetailProduct.jsx";
 import voucherApi from "../../api/voucherApi.js";
 import CouponItem from "../../components/CouponItem.jsx";
+import aiApi from "../../api/aiApi.js";
+import useAuthStore from "../../store/authStore.js";
 const MenuPage = () => {
   const [products, setProducts] = useState([]);
   const [productCategories, setProductCategories] = useState([]);
   const { categorySlug } = useParams();
   const [productDetail, setProductDetail] = useState(null);
   const [vouchers, setVouchers] = useState([]);
+  const [recommendations, setRecommendations] = useState([]);
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [chatMessages, setChatMessages] = useState([
+    {
+      role: "assistant",
+      content: "Bạn muốn uống vị nào hôm nay? Tôi có thể gợi ý món ít ngọt, nhiều cà phê, món đang giảm giá hoặc món hợp lịch sử đặt hàng của bạn.",
+    },
+  ]);
+  const [isChatLoading, setIsChatLoading] = useState(false);
+  const { user } = useAuthStore();
   const [isOpenModalDetailProduct, setIsOpenModalDetailProduct] =
     useState(false);
   useEffect(() => {
@@ -67,16 +80,196 @@ const MenuPage = () => {
     }
     getAvailableVouchers();
   }, []);
+
+  useEffect(() => {
+    const getRecommendations = async () => {
+      if (!user) {
+        setRecommendations([]);
+        return;
+      }
+
+      try {
+        setIsLoadingRecommendations(true);
+        const data = await aiApi.recommendProducts();
+        setRecommendations(data.recommendations || []);
+      } catch (error) {
+        console.warn(
+          error.response?.data?.message || "Khong the lay goi y mon bang AI"
+        );
+      } finally {
+        setIsLoadingRecommendations(false);
+      }
+    };
+
+    getRecommendations();
+  }, [user]);
+
+  const openProductDetail = (product) => {
+    if (product.status) {
+      setProductDetail(product);
+      setIsOpenModalDetailProduct(true);
+    }
+  };
+
+  const handleChatSubmit = async (event) => {
+    event.preventDefault();
+    const message = chatInput.trim();
+
+    if (!message || isChatLoading) return;
+
+    setChatInput("");
+    setChatMessages((prev) => [...prev, { role: "user", content: message }]);
+
+    try {
+      setIsChatLoading(true);
+      const data = await aiApi.chat(message);
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: data.reply || "Tôi chưa có câu trả lời phù hợp, bạn thử hỏi theo khẩu vị hoặc mức giá nhé.",
+        },
+      ]);
+    } catch (error) {
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: error.response?.data?.message || "Hiện tôi chưa kết nối được AI, bạn thử lại sau nhé.",
+        },
+      ]);
+    } finally {
+      setIsChatLoading(false);
+    }
+  };
+
   return (
-    <div className="mx-auto px-20 max-sm:px-4 pt-4 w-full bg-gradient-to-b bg-amber-100 to-white">
+    <div className="mx-auto px-20 max-sm:px-4 pt-24 w-full bg-gradient-to-b bg-amber-100 to-white">
       
       {vouchers.length > 0 && (
         <div className="w-full flex max-xl:flex-col max-xl:gap-y-4 gap-x-4 items-center justify-between mx-auto mt-10">
           {vouchers.map((voucher) => (
-           <CouponItem voucher={voucher}/>
+           <CouponItem key={voucher._id} voucher={voucher}/>
           ))}
         </div>  
       )} 
+      {user && (
+        <section className="mt-10 bg-white/90 border border-orange-100 shadow-xl rounded-2xl overflow-hidden">
+          <div className="grid lg:grid-cols-[1.15fr_0.85fr]">
+            <div className="p-5 sm:p-6 border-b lg:border-b-0 lg:border-r border-orange-100">
+              <div className="mb-4">
+                <p className="text-sm font-semibold text-orange-600">AI Gemini</p>
+                <h2 className="text-2xl font-bold">Trợ lý tư vấn món</h2>
+              </div>
+
+              <div className="h-72 overflow-y-auto rounded-xl bg-amber-50/70 p-4 space-y-3">
+                {chatMessages.map((item, index) => (
+                  <div
+                    key={`${item.role}-${index}`}
+                    className={`flex ${item.role === "user" ? "justify-end" : "justify-start"}`}
+                  >
+                    <div
+                      className={`max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-6 ${
+                        item.role === "user"
+                          ? "bg-orange-500 text-white rounded-br-sm"
+                          : "bg-white text-gray-700 shadow rounded-bl-sm"
+                      }`}
+                    >
+                      {item.content}
+                    </div>
+                  </div>
+                ))}
+                {isChatLoading && (
+                  <div className="flex justify-start">
+                    <div className="bg-white text-gray-500 shadow rounded-2xl rounded-bl-sm px-4 py-3 text-sm">
+                      AI đang trả lời...
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <form onSubmit={handleChatSubmit} className="mt-4 flex gap-3">
+                <input
+                  value={chatInput}
+                  onChange={(event) => setChatInput(event.target.value)}
+                  placeholder="Ví dụ: Tôi muốn món cà phê ít ngọt"
+                  className="flex-1 rounded-xl border border-orange-200 bg-white px-4 py-3 outline-none focus:border-orange-500"
+                />
+                <button
+                  type="submit"
+                  disabled={isChatLoading || !chatInput.trim()}
+                  className="rounded-xl bg-orange-500 px-5 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:bg-gray-300"
+                >
+                  Gửi
+                </button>
+              </form>
+            </div>
+
+            <div className="p-5 sm:p-6">
+              <p className="text-sm font-semibold text-orange-600">Bạn có thể hỏi</p>
+              <div className="mt-4 grid gap-3">
+                {[
+                  "Tôi thích cà phê ít ngọt, nên uống món nào?",
+                  "Món nào hợp để uống buổi sáng?",
+                  "Có món nào đang giảm giá không?",
+                ].map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    className="text-left rounded-xl bg-amber-50 px-4 py-3 text-sm text-gray-700 hover:bg-orange-50"
+                    onClick={() => setChatInput(suggestion)}
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+      {user && (isLoadingRecommendations || recommendations.length > 0) && (
+        <section className="mt-10">
+          <div className="flex items-end justify-between gap-4 mb-5">
+            <div>
+              <p className="text-sm font-semibold text-orange-600">AI Gemini</p>
+              <h2 className="text-2xl font-bold">Gợi ý dành cho bạn</h2>
+            </div>
+            {isLoadingRecommendations && (
+              <span className="text-sm text-gray-500">Đang phân tích...</span>
+            )}
+          </div>
+
+          {recommendations.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+              {recommendations.map(({ product, reason }) => (
+                <button
+                  key={product._id}
+                  type="button"
+                  className="text-left bg-white rounded-xl shadow-lg p-4 hover:-translate-y-1 transition-transform"
+                  onClick={() => openProductDetail(product)}
+                >
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="w-full h-32 object-cover rounded-lg"
+                  />
+                  <div className="mt-3 space-y-2">
+                    <p className="font-bold truncate">{product.name}</p>
+                    <p className="text-red-500 font-bold">
+                      {formatCurrencyVN(
+                        product.discount > 0
+                          ? product.price * (1 - product.discount / 100)
+                          : product.price
+                      )}
+                    </p>
+                    <p className="text-sm text-gray-500 line-clamp-2">{reason}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
       <h1 className="text-2xl font-bold text-center mt-10">Sản phẩm từ Nhà</h1>
       <div className="flex flex-col justify-center items-center mt-10 gap-y-20 max-sm:gap-y-10">
         <div className="flex justify-start gap-x-10 gap-y-4 overflow-x-auto w-full py-2 px-2 md:justify-center max-w-4xl md:flex-wrap">
@@ -113,13 +306,8 @@ const MenuPage = () => {
           {products &&
             products.length > 0 &&
             products.map((product) => (
-              <div className="w-full relative flex sm:flex-col sm:max-w-[230px] max-sm:gap-x-6 gap-y-4 rounded-xl px-4 py-4 shadow-xl cursor-pointer"
-               onClick={() => {
-                if(product.status){
-                 setProductDetail(product);
-                 setIsOpenModalDetailProduct(true);
-                }
-               }}
+              <div key={product._id} className="w-full relative flex sm:flex-col sm:max-w-[230px] max-sm:gap-x-6 gap-y-4 rounded-xl px-4 py-4 shadow-xl cursor-pointer"
+               onClick={() => openProductDetail(product)}
               >
                 {!product.status && (
                   <div className="absolute top-0 left-0 w-full h-full bg-black/30 rounded-xl z-10 flex items-center justify-center">

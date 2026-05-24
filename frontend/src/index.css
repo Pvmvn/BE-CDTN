@@ -70,7 +70,7 @@ body {
  touch-action: manipulation;
 }
 
-.shadow {
+.button-shadow {
  position: absolute;
  top: 0;
  left: 0;
@@ -132,14 +132,14 @@ body {
  transition: transform 34ms;
 }
 
-.animate-button:hover .shadow {
+.animate-button:hover .button-shadow {
  transform: translateY(4px);
  transition: transform
     250ms
     cubic-bezier(.3, .7, .4, 1.5);
 }
 
-.animate-button:active .shadow {
+.animate-button:active .button-shadow {
  transform: translateY(1px);
  transition: transform 34ms;
 }

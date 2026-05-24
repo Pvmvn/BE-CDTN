@@ -37,7 +37,7 @@ const ViewShopSection = () => {
         </div>
         <Link to="/shop">
           <button className="animate-button">
-            <span className="shadow"></span>
+            <span className="button-shadow"></span>
             <span className="edge"></span>
             <span className="front text font-semibold"> Tìm hiểu thêm</span>
           </button>

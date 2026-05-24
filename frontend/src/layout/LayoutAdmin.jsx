@@ -99,7 +99,7 @@ export default function LayoutAdmin() {
                   }`}
                 >
                   <PenSquare className="w-5 h-5 mr-3 flex-shrink-0" />
-                  <span>Quản lý loại sản phẩm</span>
+                  <span>Danh mục sản phẩm</span>
                 </Link>
               </li>
             )}
@@ -187,7 +187,7 @@ export default function LayoutAdmin() {
                 }`}
               >
                 <TbReceipt className="w-5 h-5 mr-3 flex-shrink-0" />
-                <span>Quản lý phiếu nhập kho</span>
+                <span>Nhập/Xuất kho</span>
               </Link>
             </li>
             {isAdmin && (
@@ -201,7 +201,7 @@ export default function LayoutAdmin() {
                   }`}
                 >
                   <FileCog className="w-5 h-5 mr-3 flex-shrink-0" />
-                  <span>Quản lý loại bài viết</span>
+                  <span>Quản lý danh mục bài viết</span>
                 </Link>
               </li>
             )}
@@ -232,7 +232,7 @@ export default function LayoutAdmin() {
                   }`}
                 >
                   <MdOutlineMessage className="w-5 h-5 mr-3 flex-shrink-0" />
-                  <span>Quản lý lời nhắn</span>
+                  <span>Phản hồi khách hàng</span>
                 </Link>
               </li>
             )}

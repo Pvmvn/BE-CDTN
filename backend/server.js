@@ -22,6 +22,7 @@ import paymentRouter from './router/payment.router.js';
 import importReceiptRouter from './router/importReceipt.router.js';
 import reserVationRouter from './router/reservation.router.js';
 import dashboardRouter from './router/dashboard.router.js';
+import aiRouter from './router/ai.router.js';
 
 const app = express();
 const server = http.createServer(app); 
@@ -58,6 +59,7 @@ app.use("/api/payment", paymentRouter);
 app.use("/api/import-receipts", importReceiptRouter);
 app.use("/api/reservations", reserVationRouter);
 app.use("/api/dashboard", dashboardRouter);
+app.use("/api/ai", aiRouter);
 
 // ---- Socket.IO logic ----
 io.on("connection", (socket) => {
