@@ -10,7 +10,7 @@ import {
   consumeIngredientStock,
   restoreOrderIngredientUsages,
 } from "../../utils/inventoryCost.js";
-
+// cấu hình vnpay
 const vnpay = new VNPay({
   tmnCode: process.env.VNP_TMNCODE,
   secureSecret: process.env.VNP_HASHSECRET,

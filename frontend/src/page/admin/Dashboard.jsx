@@ -1,3 +1,4 @@
+// page/admin/Dashboard.jsx - Component trang chủ Admin (Dashboard) hiển thị tổng quan thống kê, báo cáo doanh thu, đơn hàng, và tồn kho nguyên liệu.
 import { createElement, useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import {
@@ -18,8 +19,10 @@ import dashboardApi from "../../api/dashboardApi";
 import { formatCurrencyVN } from "../../utils/formatCurrencyVN";
 import { formatDatetimeVN } from "../../utils/formatDatetimeVN";
 
+// Các hàm tiện ích hỗ trợ format và mặc định
 const getTodayString = () => new Date().toISOString().split("T")[0];
 
+// Danh sách label việt hóa cho trạng thái đơn hàng và thanh toán
 const statusLabels = {
   PROCESSING: "Đang xử lý",
   COMPLETED: "Hoàn tất",
@@ -31,6 +34,7 @@ const statusLabels = {
   OFFLINE: "Tại quán",
 };
 
+// Component thẻ thống kê nhỏ (ví dụ: Doanh thu, Tổng đơn hàng)
 const StatCard = ({ title, value, icon: Icon, tone = "green", hint }) => {
   const toneClass = {
     green: "bg-green-50 text-green-700 border-green-100",
@@ -57,6 +61,7 @@ const StatCard = ({ title, value, icon: Icon, tone = "green", hint }) => {
   );
 };
 
+// Component bảng nhỏ hiển thị phân loại (ví dụ: Trạng thái đơn hàng, Hiệu quả kinh doanh)
 const BreakdownTable = ({ title, rows }) => (
   <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
     <div className="px-4 py-3 border-b border-gray-200">
@@ -82,11 +87,13 @@ const formatMoney = (value) => formatCurrencyVN(numberOrZero(value));
 const formatPercent = (value) => `${numberOrZero(value)}%`;
 
 export default function Dashboard() {
+  // Các state lưu trữ dữ liệu thống kê, trạng thái loading và bộ lọc thời gian
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(false);
   const [startDate, setStartDate] = useState(getTodayString());
   const [endDate, setEndDate] = useState(getTodayString());
 
+  // Hàm gọi API lấy dữ liệu thống kê dựa trên khoảng thời gian (startDate, endDate)
   const loadSummary = async () => {
     try {
       setLoading(true);
@@ -103,6 +110,7 @@ export default function Dashboard() {
     loadSummary();
   }, [startDate, endDate]);
 
+  // Các lựa chọn nhanh cho bộ lọc thời gian
   const quickDateRanges = useMemo(
     () => [
       { key: "today", label: "Hôm nay" },
@@ -113,6 +121,7 @@ export default function Dashboard() {
     []
   );
 
+  // Xử lý khi người dùng click vào các nút chọn ngày nhanh
   const handleQuickDate = (type) => {
     const today = new Date();
     const todayStr = getTodayString();
@@ -146,6 +155,7 @@ export default function Dashboard() {
     setEndDate(todayStr);
   };
 
+  // Chuẩn bị dữ liệu cho các bảng BreakdownTable từ dữ liệu API trả về
   const orderStatusRows = summary
     ? [
         { label: "Đang xử lý", value: summary.breakdowns.orderStatus.PROCESSING },
@@ -185,6 +195,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Khối bộ lọc thời gian và tải lại */}
       <div className="bg-white border border-gray-200 rounded-lg p-5">
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
           <div>
@@ -253,6 +264,7 @@ export default function Dashboard() {
 
       {summary ? (
         <>
+          {/* Hàng 1: Các chỉ số thống kê về Giá vốn, Lãi gộp, Tồn kho */}
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
             <StatCard
               title="Giá vốn đã bán"
@@ -291,6 +303,7 @@ export default function Dashboard() {
             />
           </div>
 
+          {/* Hàng 2: Các chỉ số thống kê về Doanh thu, Tổng đơn hàng, Người dùng, vv. */}
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             <StatCard
               title="Doanh thu đã thanh toán"
@@ -348,6 +361,7 @@ export default function Dashboard() {
             />
           </div>
 
+          {/* Hàng 3: Các bảng nhỏ chi tiết hiệu quả kinh doanh, trạng thái đơn, vận hành */}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
             <BreakdownTable title="Hiệu quả kinh doanh" rows={financialRows} />
             <BreakdownTable title="Trạng thái đơn hàng" rows={orderStatusRows} />
@@ -355,6 +369,7 @@ export default function Dashboard() {
             <BreakdownTable title="Vận hành" rows={operationRows} />
           </div>
 
+          {/* Hàng 4: Các bảng lớn hiển thị Sản phẩm bán chạy và Nguyên liệu sắp hết */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-200 flex items-center gap-2">
@@ -473,6 +488,7 @@ export default function Dashboard() {
             </div>
           </div>
 
+          {/* Hàng 5: Bảng danh sách đơn hàng mới nhất */}
           <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-200 flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-blue-600" />

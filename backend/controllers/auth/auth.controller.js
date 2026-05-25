@@ -217,7 +217,7 @@ export const changePassword = async (req, res) => {
     if (!user)
       return res.status(404).json({ message: "Không tìm thấy người dùng" });
 
-    // So sánh mật khẩu cũ
+    // So sánh mật khẩu
     const isMatch = await bcrypt.compare(oldPassword, user.password);
     if (!isMatch)
       return res.status(400).json({ message: "Mật khẩu cũ không đúng" });
