@@ -16,8 +16,7 @@ const CouponItem = ({ voucher }) => {
         <p className="font-bold whitespace-break-spaces">
           NHẬP MÃ: {voucher.code}
         </p>
-        <p className="text-xs text-gray-400">- {voucher.description}</p>
-
+        <p className="text-xs text-gray-400 uppercase font-normal">{voucher.description}</p>
         <div className="flex mt-2 items-center justify-between">
           <button
             onClick={() => {
@@ -39,10 +38,10 @@ const CouponItem = ({ voucher }) => {
             {!copied ? "Sao chép mã" : "Đã sao chép"}
           </button>
 
-          <button className="text-sm text-blue-800 cursor-pointer"
+          <button
            onClick={() => setIsOpenModalConditionsVoucher(true)}
           >
-            Điều kiện
+            <p className="text-sm text-blue-800 cursor-pointer hover:underline hover:font-bold ml-4 hover:text-blue-900 transition-all "  >Điều kiện</p>
           </button>
         </div>
       </div>

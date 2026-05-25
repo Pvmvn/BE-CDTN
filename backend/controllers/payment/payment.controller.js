@@ -6,6 +6,10 @@ import Voucher from "../../model/voucher.model.js";
 import Recipe from "../../model/recipe.model.js";
 import Ingredient from "../../model/ingredient.model.js";
 import Cart from "../../model/cart.model.js";
+import {
+  consumeIngredientStock,
+  restoreOrderIngredientUsages,
+} from "../../utils/inventoryCost.js";
 
 const vnpay = new VNPay({
   tmnCode: process.env.VNP_TMNCODE,
@@ -23,7 +27,39 @@ const getIPv4 = (ip) => {
   }
   return ip.replace("::ffff:", "");
 };
-// Hàm tự động hủy order sau 15 phút nếu không thanh toán
+
+const restoreOrderStock = async ({ order, session }) => {
+  const hasIngredientUsages = order.items.some(
+    (item) => item.ingredientUsages?.length
+  );
+
+  if (hasIngredientUsages) {
+    await restoreOrderIngredientUsages({ order, session });
+    return;
+  }
+
+  // Fallback for old orders created before ingredient cost snapshots existed.
+  for (const item of order.items) {
+    const recipe = await Recipe.findOne({
+      productId: item.productId,
+    }).session(session);
+
+    if (recipe) {
+      for (const r of recipe.items) {
+        const requiredAmount = r.quantity * item.quantity;
+        await Ingredient.findByIdAndUpdate(
+          r.ingredientId,
+          {
+            $inc: { quantity: requiredAmount },
+            $set: { status: true },
+          },
+          { session }
+        );
+      }
+    }
+  }
+};
+
 const scheduleOrderCancellation = async (orderId) => {
   setTimeout(async () => {
     const session = await mongoose.startSession();
@@ -31,25 +67,7 @@ const scheduleOrderCancellation = async (orderId) => {
     try {
       const order = await Order.findById(orderId).session(session);
       if (order && order.paymentStatus === "PENDING") {
-        // HOÀN LẠI NGUYÊN LIỆU THEO CÔNG THỨC
-        for (const item of order.items) {
-          const recipe = await Recipe.findOne({
-            productId: item.productId,
-          }).session(session);
-          if (recipe) {
-            for (const r of recipe.items) {
-              const requiredAmount = r.quantity * item.quantity;
-              await Ingredient.findByIdAndUpdate(
-                r.ingredientId,
-                {
-                  $inc: { quantity: requiredAmount },
-                  $set: { status: true },
-                },
-                { session }
-              );
-            }
-          }
-        }
+        await restoreOrderStock({ order, session });
         order.status = "CANCELLED";
         order.paymentStatus = "FAILED";
         await order.save({ session });
@@ -64,26 +82,34 @@ const scheduleOrderCancellation = async (orderId) => {
     } finally {
       session.endSession();
     }
-  }, 15 * 60 * 1000); // 15 phút
+  }, 15 * 60 * 1000);
 };
+
 export const createPayment = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const { cartItems, userId, delivery, voucher, paymentMethod = "VNPAY" } = req.body;
-    // VALIDATE
+    const {
+      cartItems,
+      userId,
+      delivery,
+      voucher,
+      paymentMethod = "VNPAY",
+    } = req.body;
+
     if (!delivery || !delivery.name || !delivery.phone) {
+      await session.abortTransaction();
       return res.status(400).json({
         message: "Thiếu thông tin giao hàng",
         delivery: delivery || {},
       });
     }
+
     if (!cartItems || !cartItems.length) {
       await session.abortTransaction();
       return res.status(400).json({ message: "Giỏ hàng trống" });
     }
 
-    // BƯỚC 1: TÍNH TIỀN
     let total = 0;
     const detailedItems = [];
 
@@ -113,17 +139,16 @@ export const createPayment = async (req, res) => {
         price: itemPrice,
         quantity: item.quantity,
         note: item.note || "",
+        ingredientUsages: [],
       });
     }
 
-    // Phí ship
     let shippingFee = 0;
     if (delivery?.address) {
       shippingFee = 20000;
       total += shippingFee;
     }
 
-    // Voucher
     if (voucher && voucher.discount) {
       total -= Number(voucher.discount);
       if (total < 0) total = 0;
@@ -131,7 +156,6 @@ export const createPayment = async (req, res) => {
 
     total = Math.round(total);
 
-    // BƯỚC 2: TRỪ KHO NGUYÊN LIỆU
     for (const item of detailedItems) {
       const recipe = await Recipe.findOne({
         productId: item.productId,
@@ -146,39 +170,23 @@ export const createPayment = async (req, res) => {
 
       for (const recipeItem of recipe.items) {
         const requiredAmount = recipeItem.quantity * item.quantity;
+        const usage = await consumeIngredientStock({
+          ingredientId: recipeItem.ingredientId,
+          quantity: requiredAmount,
+          session,
+        });
 
-        const ingredientAfterUpdate = await Ingredient.findOneAndUpdate(
-          {
-            _id: recipeItem.ingredientId,
-            quantity: { $gte: requiredAmount },
-            status: true,
-          },
-          {
-            $inc: { quantity: -requiredAmount },
-          },
-          {
-            new: true,
-            session,
-          }
-        );
-
-        // Không trừ được => rollback
-        if (!ingredientAfterUpdate) {
+        if (!usage) {
           await session.abortTransaction();
           return res.status(400).json({
             message: "Kho không đủ nguyên liệu hoặc nguyên liệu đã ngừng hoạt động",
           });
         }
 
-        // Auto tắt nguyên liệu nếu = 0
-        if (ingredientAfterUpdate.quantity === 0) {
-          ingredientAfterUpdate.status = false;
-          await ingredientAfterUpdate.save({ session });
-        }
+        item.ingredientUsages.push(usage);
       }
     }
 
-    // BƯỚC 3: TẠO ORDER
     const newOrder = new Order({
       userId,
       voucherId: voucher?.voucherId || null,
@@ -189,10 +197,10 @@ export const createPayment = async (req, res) => {
         phone: delivery.phone,
         address: delivery.address || null,
         note: delivery.note || "",
-        deliveryTime: delivery.deliveryTime || "Càng sớm càng tốt", // THÊM DÒNG NÀY
+        deliveryTime: delivery.deliveryTime || "Càng sớm càng tốt",
       },
       orderType: "ONLINE",
-      paymentMethod: paymentMethod,
+      paymentMethod,
       totalPrice: total,
       paymentStatus: "PENDING",
     });
@@ -200,22 +208,19 @@ export const createPayment = async (req, res) => {
     newOrder.vnp_TxnRef = newOrder._id.toString();
     await newOrder.save({ session });
 
-    // COMMIT
     await session.commitTransaction();
 
     if (paymentMethod === "CASH") {
-      // Cập nhật voucher nếu có
       if (voucher && voucher.voucherId) {
         await Voucher.findByIdAndUpdate(
           voucher.voucherId,
           { $inc: { usedCount: 1 } },
-          { session: null } // using null session since we already committed, or just independent update
+          { session: null }
         );
       }
 
-      // CLEAR CART
       await Cart.findOneAndUpdate(
-        { userId: userId },
+        { userId },
         { $set: { items: [] } },
         { session: null }
       );
@@ -226,12 +231,9 @@ export const createPayment = async (req, res) => {
       });
     }
 
-    // Tự động hủy nếu quá hạn thanh toán
     scheduleOrderCancellation(newOrder._id);
 
-    // BƯỚC 4: TẠO VNPAY
     const txnRef = newOrder._id.toString();
-
     const vnpayResponse = await vnpay.buildPaymentUrl({
       vnp_Amount: total,
       vnp_IpAddr: getIPv4(req.ip || "127.0.0.1"),
@@ -278,7 +280,6 @@ export const handleVnpayReturn = async (req, res) => {
     const orderId = verify.vnp_TxnRef;
     const order = await Order.findById(orderId).session(session);
 
-    // Không tìm thấy đơn hàng
     if (!order) {
       await session.abortTransaction();
       return res.redirect(
@@ -288,28 +289,8 @@ export const handleVnpayReturn = async (req, res) => {
       );
     }
 
-    // Nếu thanh toán thất bại
     if (!verify.isSuccess) {
-      for (const item of order.items) {
-        const recipe = await Recipe.findOne({
-          productId: item.productId,
-        }).session(session);
-
-        if (recipe) {
-          for (const r of recipe.items) {
-            const requiredAmount = r.quantity * item.quantity;
-
-            await Ingredient.findByIdAndUpdate(
-              r.ingredientId,
-              {
-                $inc: { quantity: requiredAmount },
-                $set: { status: true },
-              },
-              { session }
-            );
-          }
-        }
-      }
+      await restoreOrderStock({ order, session });
 
       order.paymentStatus = "FAILED";
       order.status = "CANCELLED";
@@ -322,13 +303,11 @@ export const handleVnpayReturn = async (req, res) => {
       );
     }
 
-    // THANH TOÁN THÀNH CÔNG
     order.paymentStatus = "SUCCESS";
     order.vnp_TransactionNo = verify.vnp_TransactionNo;
     order.vnp_Amount = verify.vnp_Amount;
     order.vnp_PayDate = verify.vnp_PayDate;
 
-    // Cập nhật voucher nếu có
     if (order.voucherId) {
       await Voucher.findByIdAndUpdate(
         order.voucherId,
@@ -337,7 +316,6 @@ export const handleVnpayReturn = async (req, res) => {
       );
     }
 
-    // CLEAR CART
     await Cart.findOneAndUpdate(
       { userId: order.userId },
       { $set: { items: [] } },

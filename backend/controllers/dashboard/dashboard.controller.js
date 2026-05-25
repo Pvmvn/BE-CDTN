@@ -5,6 +5,7 @@ import Ingredient from "../../model/ingredient.model.js";
 import Voucher from "../../model/voucher.model.js";
 import Contact from "../../model/contact.model.js";
 import Reservation from "../../model/reservation.model.js";
+import ImportReceipt from "../../model/receipt.model.js";
 
 const buildDateRange = (startDate, endDate) => {
   const start = startDate ? new Date(startDate) : new Date();
@@ -18,6 +19,39 @@ const buildDateRange = (startDate, endDate) => {
 
 const sumField = (items, field) =>
   items.reduce((total, item) => total + Number(item[field] || 0), 0);
+
+const lowStockStages = [
+  {
+    $addFields: {
+      lowStockLimit: {
+        $switch: {
+          branches: [
+            { case: { $in: ["$unit", ["g", "ml"]] }, then: 1000 },
+            { case: { $eq: ["$unit", "cái"] }, then: 10 },
+            { case: { $eq: ["$unit", "cÃ¡i"] }, then: 10 },
+          ],
+          default: 100,
+        },
+      },
+    },
+  },
+  {
+    $match: {
+      $expr: { $lte: ["$quantity", "$lowStockLimit"] },
+    },
+  },
+  {
+    $project: {
+      name: 1,
+      unit: 1,
+      quantity: 1,
+      status: 1,
+      lowStockLimit: 1,
+    },
+  },
+  { $sort: { quantity: 1 } },
+  { $limit: 8 },
+];
 
 export const getDashboardSummary = async (req, res) => {
   try {
@@ -43,6 +77,9 @@ export const getDashboardSummary = async (req, res) => {
       lowStockIngredients,
       recentOrders,
       topProducts,
+      cogsRows,
+      importSpendRows,
+      inventoryValueRows,
     ] = await Promise.all([
       Order.aggregate([
         { $match: dateMatch },
@@ -76,11 +113,7 @@ export const getDashboardSummary = async (req, res) => {
       ]),
       Contact.countDocuments({ status: "new" }),
       Voucher.countDocuments({ status: "active" }),
-      Ingredient.find({ quantity: { $lte: 100 } })
-        .select("name unit quantity status")
-        .sort({ quantity: 1 })
-        .limit(8)
-        .lean(),
+      Ingredient.aggregate(lowStockStages),
       Order.find(dateMatch)
         .select("totalPrice orderType paymentMethod paymentStatus status createdAt")
         .sort({ createdAt: -1 })
@@ -97,10 +130,71 @@ export const getDashboardSummary = async (req, res) => {
             revenue: {
               $sum: { $multiply: ["$items.price", "$items.quantity"] },
             },
+            cogs: { $sum: { $sum: "$items.ingredientUsages.totalCost" } },
+          },
+        },
+        {
+          $addFields: {
+            grossProfit: { $subtract: ["$revenue", "$cogs"] },
+            grossMargin: {
+              $cond: [
+                { $gt: ["$revenue", 0] },
+                {
+                  $multiply: [
+                    { $divide: [{ $subtract: ["$revenue", "$cogs"] }, "$revenue"] },
+                    100,
+                  ],
+                },
+                0,
+              ],
+            },
           },
         },
         { $sort: { quantity: -1 } },
         { $limit: 8 },
+      ]),
+      Order.aggregate([
+        { $match: paidOrderMatch },
+        { $unwind: "$items" },
+        {
+          $group: {
+            _id: null,
+            cogs: { $sum: { $sum: "$items.ingredientUsages.totalCost" } },
+            soldLineItems: { $sum: 1 },
+            lineItemsWithCost: {
+              $sum: {
+                $cond: [
+                  {
+                    $gt: [
+                      { $size: { $ifNull: ["$items.ingredientUsages", []] } },
+                      0,
+                    ],
+                  },
+                  1,
+                  0,
+                ],
+              },
+            },
+          },
+        },
+      ]),
+      ImportReceipt.aggregate([
+        { $match: { ...dateMatch, type: "IMPORT" } },
+        {
+          $group: {
+            _id: null,
+            totalImportSpend: { $sum: { $sum: "$items.totalCost" } },
+            importReceipts: { $sum: 1 },
+          },
+        },
+      ]),
+      Ingredient.aggregate([
+        {
+          $group: {
+            _id: null,
+            inventoryValue: { $sum: "$totalCost" },
+          },
+        },
       ]),
     ]);
 
@@ -152,6 +246,27 @@ export const getDashboardSummary = async (req, res) => {
     const totalUsers = sumField(userRoleRows, "count");
     const totalProducts = sumField(productStatusRows, "count");
     const totalReservations = sumField(reservationStatusRows, "count");
+    const cogsSummary = cogsRows[0] || {
+      cogs: 0,
+      soldLineItems: 0,
+      lineItemsWithCost: 0,
+    };
+    const importSpendSummary = importSpendRows[0] || {
+      totalImportSpend: 0,
+      importReceipts: 0,
+    };
+    const inventoryValueSummary = inventoryValueRows[0] || {
+      inventoryValue: 0,
+    };
+    const grossProfit = revenueSummary.revenue - cogsSummary.cogs;
+    const grossMargin =
+      revenueSummary.revenue > 0
+        ? (grossProfit / revenueSummary.revenue) * 100
+        : 0;
+    const cogsCoverage =
+      cogsSummary.soldLineItems > 0
+        ? (cogsSummary.lineItemsWithCost / cogsSummary.soldLineItems) * 100
+        : 100;
 
     res.json({
       dateRange: {
@@ -168,6 +283,13 @@ export const getDashboardSummary = async (req, res) => {
         unreadContacts,
         activeVouchers,
         lowStockIngredients: lowStockIngredients.length,
+        cogs: Math.round(cogsSummary.cogs),
+        grossProfit: Math.round(grossProfit),
+        grossMargin: Math.round(grossMargin * 10) / 10,
+        cogsCoverage: Math.round(cogsCoverage * 10) / 10,
+        totalImportSpend: Math.round(importSpendSummary.totalImportSpend),
+        importReceipts: importSpendSummary.importReceipts,
+        inventoryValue: Math.round(inventoryValueSummary.inventoryValue),
       },
       breakdowns: {
         orderStatus,

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import { Bot, X, AlertCircle } from "lucide-react";
 import productApi from "../../api/productApi";
 import productCategoryApi from "../../api/productCategoryApi";
 import { useParams } from "react-router-dom";
@@ -29,6 +30,8 @@ const MenuPage = () => {
   const { user } = useAuthStore();
   const [isOpenModalDetailProduct, setIsOpenModalDetailProduct] =
     useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isVoucherOpen, setIsVoucherOpen] = useState(false);
   useEffect(() => {
       document.title = `Tất cả sản phẩm`;
   }, []);
@@ -146,19 +149,61 @@ const MenuPage = () => {
   return (
     <div className="mx-auto px-20 max-sm:px-4 pt-24 w-full bg-gradient-to-b bg-amber-100 to-white">
       
-      {vouchers.length > 0 && (
-        <div className="w-full flex max-xl:flex-col max-xl:gap-y-4 gap-x-4 items-center justify-between mx-auto mt-10">
-          {vouchers.map((voucher) => (
-           <CouponItem key={voucher._id} voucher={voucher}/>
-          ))}
-        </div>  
-      )} 
-      {user && (
-        <section className="mt-10 bg-white/90 border border-orange-100 shadow-xl rounded-2xl overflow-hidden">
+      {vouchers.length > 0 && !isVoucherOpen && (
+        <div className="mt-10 flex justify-center">
+          <button
+            onClick={() => setIsVoucherOpen(true)}
+            className="flex items-center gap-2 rounded-full bg-red-600 px-6 py-3 font-semibold text-white shadow-lg transition-colors hover:bg-red-700 animate-bounce"
+          >
+            <AlertCircle className="w-6 h-6" />
+            Có mã giảm giá dành cho bạn!
+          </button>
+        </div>
+      )}
+
+      {vouchers.length > 0 && isVoucherOpen && (
+        <div className="mt-10 flex w-full justify-center">
+          <div className="relative rounded-2xl border border-red-100 bg-red-50 p-6 shadow-xl w-fit max-w-full">
+            <button
+              onClick={() => setIsVoucherOpen(false)}
+              className="absolute right-4 top-4 z-10 rounded-full bg-white p-2 text-gray-500 shadow-sm transition-colors hover:bg-gray-100 hover:text-gray-800"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h2 className="mb-6 flex items-center justify-center gap-2 px-8 text-2xl font-bold text-red-600">
+              <AlertCircle className="w-6 h-6" /> Ưu đãi hôm nay
+            </h2>
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              {vouchers.map((voucher) => (
+                <CouponItem key={voucher._id} voucher={voucher} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      {user && !isChatOpen && (
+        <div className="mt-10 flex justify-center">
+          <button
+            onClick={() => setIsChatOpen(true)}
+            className="flex items-center gap-2 rounded-full bg-orange-500 px-6 py-3 font-semibold text-white shadow-lg transition-colors hover:bg-orange-600"
+          >
+            <Bot className="w-6 h-6" />
+            Mở trợ lý tư vấn AI
+          </button>
+        </div>
+      )}
+      {user && isChatOpen && (
+        <section className="mt-10 bg-white/90 border border-orange-100 shadow-xl rounded-2xl overflow-hidden relative">
+          <button
+            onClick={() => setIsChatOpen(false)}
+            className="absolute right-4 top-4 p-2 text-gray-500 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded-full z-10 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
           <div className="grid lg:grid-cols-[1.15fr_0.85fr]">
             <div className="p-5 sm:p-6 border-b lg:border-b-0 lg:border-r border-orange-100">
               <div className="mb-4">
-                <p className="text-sm font-semibold text-orange-600">AI Gemini</p>
+                {/* <p className="text-sm font-semibold text-orange-600">AI Gemini</p> */}
                 <h2 className="text-2xl font-bold">Trợ lý tư vấn món</h2>
               </div>
 
@@ -231,7 +276,7 @@ const MenuPage = () => {
         <section className="mt-10">
           <div className="flex items-end justify-between gap-4 mb-5">
             <div>
-              <p className="text-sm font-semibold text-orange-600">AI Gemini</p>
+              {/* <p className="text-sm font-semibold text-orange-600">AI Gemini</p> */}
               <h2 className="text-2xl font-bold">Gợi ý dành cho bạn</h2>
             </div>
             {isLoadingRecommendations && (
@@ -240,19 +285,21 @@ const MenuPage = () => {
           </div>
 
           {recommendations.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
               {recommendations.map(({ product, reason }) => (
                 <button
                   key={product._id}
                   type="button"
-                  className="text-left bg-white rounded-xl shadow-lg p-4 hover:-translate-y-1 transition-transform"
+                  className="text-left bg-white rounded-xl shadow-lg p-5 hover:-translate-y-1 transition-transform"
                   onClick={() => openProductDetail(product)}
                 >
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-32 object-cover rounded-lg"
-                  />
+                  <div className="flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-lg bg-amber-50">
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
                   <div className="mt-3 space-y-2">
                     <p className="font-bold truncate">{product.name}</p>
                     <p className="text-red-500 font-bold">
@@ -262,7 +309,7 @@ const MenuPage = () => {
                           : product.price
                       )}
                     </p>
-                    <p className="text-sm text-gray-500 line-clamp-2">{reason}</p>
+                    <p className="text-sm text-gray-500 line-clamp-3">{reason}</p>
                   </div>
                 </button>
               ))}
@@ -270,7 +317,7 @@ const MenuPage = () => {
           )}
         </section>
       )}
-      <h1 className="text-2xl font-bold text-center mt-10">Sản phẩm từ Nhà</h1>
+      <h1 className="text-2xl font-bold text-center mt-10">Sản phẩm từ THREESTAR</h1>
       <div className="flex flex-col justify-center items-center mt-10 gap-y-20 max-sm:gap-y-10">
         <div className="flex justify-start gap-x-10 gap-y-4 overflow-x-auto w-full py-2 px-2 md:justify-center max-w-4xl md:flex-wrap">
           {productCategories.map((category) => (

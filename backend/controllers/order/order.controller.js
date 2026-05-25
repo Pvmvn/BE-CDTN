@@ -4,6 +4,10 @@ import Product from "../../model/product.model.js";
 import Recipe from "../../model/recipe.model.js";
 import Ingredient from "../../model/ingredient.model.js";
 import Voucher from "../../model/voucher.model.js";
+import {
+  consumeIngredientStock,
+  restoreOrderIngredientUsages,
+} from "../../utils/inventoryCost.js";
 
 // Tạo orderOffline 
 export const createOrderOffline = async (req, res) => {
@@ -82,30 +86,24 @@ export const createOrderOffline = async (req, res) => {
         });
       }
 
+      item.ingredientUsages = [];
+
       for (const r of recipe.items) {
         const requiredAmount = r.quantity * item.quantity;
 
-        const ingredientAfterUpdate = await Ingredient.findOneAndUpdate(
-          {
-            _id: r.ingredientId,
-            quantity: { $gte: requiredAmount },
-            status: true,
-          },
-          { $inc: { quantity: -requiredAmount } },
-          { new: true, session }
-        );
+        const usage = await consumeIngredientStock({
+          ingredientId: r.ingredientId,
+          quantity: requiredAmount,
+          session,
+        });
 
-        if (!ingredientAfterUpdate) {
+        if (!usage) {
           await session.abortTransaction();
           return res.status(400).json({
             message: "Kho không đủ nguyên liệu",
           });
         }
-        // Auto tắt nếu hết
-        if (ingredientAfterUpdate.quantity === 0) {
-          ingredientAfterUpdate.status = false;
-          await ingredientAfterUpdate.save({ session });
-        }
+        item.ingredientUsages.push(usage);
       }
     }
 
@@ -328,22 +326,30 @@ export const cancelOrder = async (req, res) => {
     }
 
     // HOÀN LẠI NGUYÊN LIỆU THEO CÔNG THỨC
-    for (const item of order.items) {
-      const recipe = await Recipe.findOne({
-        productId: item.productId,
-      }).session(session);
+    const hasIngredientUsages = order.items.some(
+      (item) => item.ingredientUsages?.length
+    );
 
-      if (recipe) {
-        for (const r of recipe.items) {
-          const requiredAmount = r.quantity * item.quantity;
-          await Ingredient.findByIdAndUpdate(
-            r.ingredientId,
-            {
-              $inc: { quantity: requiredAmount },
-              $set: { status: true },
-            },
-            { session }
-          );
+    if (hasIngredientUsages) {
+      await restoreOrderIngredientUsages({ order, session });
+    } else {
+      for (const item of order.items) {
+        const recipe = await Recipe.findOne({
+          productId: item.productId,
+        }).session(session);
+
+        if (recipe) {
+          for (const r of recipe.items) {
+            const requiredAmount = r.quantity * item.quantity;
+            await Ingredient.findByIdAndUpdate(
+              r.ingredientId,
+              {
+                $inc: { quantity: requiredAmount },
+                $set: { status: true },
+              },
+              { session }
+            );
+          }
         }
       }
     }

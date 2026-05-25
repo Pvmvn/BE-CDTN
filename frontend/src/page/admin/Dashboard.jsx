@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { createElement, useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import {
   AlertTriangle,
@@ -50,7 +50,7 @@ const StatCard = ({ title, value, icon: Icon, tone = "green", hint }) => {
           {hint && <p className="mt-1 text-xs text-gray-500">{hint}</p>}
         </div>
         <div className={`p-3 rounded-lg border ${toneClass}`}>
-          <Icon className="w-5 h-5" />
+          {createElement(Icon, { className: "w-5 h-5" })}
         </div>
       </div>
     </div>
@@ -76,6 +76,10 @@ const BreakdownTable = ({ title, rows }) => (
     </table>
   </div>
 );
+
+const numberOrZero = (value) => Number(value) || 0;
+const formatMoney = (value) => formatCurrencyVN(numberOrZero(value));
+const formatPercent = (value) => `${numberOrZero(value)}%`;
 
 export default function Dashboard() {
   const [summary, setSummary] = useState(null);
@@ -167,6 +171,18 @@ export default function Dashboard() {
       ]
     : [];
 
+  const financialRows = summary
+    ? [
+        { label: "Doanh thu", value: formatMoney(summary.totals.revenue) },
+        { label: "Giá vốn đã bán", value: formatMoney(summary.totals.cogs) },
+        { label: "Lãi gộp", value: formatMoney(summary.totals.grossProfit) },
+        { label: "Biên lãi gộp", value: formatPercent(summary.totals.grossMargin) },
+        { label: "Tiền nhập nguyên liệu", value: formatMoney(summary.totals.totalImportSpend) },
+        { label: "Giá trị tồn kho", value: formatMoney(summary.totals.inventoryValue) },
+        { label: "Độ phủ giá vốn", value: formatPercent(summary.totals.cogsCoverage) },
+      ]
+    : [];
+
   return (
     <div className="space-y-6">
       <div className="bg-white border border-gray-200 rounded-lg p-5">
@@ -237,10 +253,48 @@ export default function Dashboard() {
 
       {summary ? (
         <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+            <StatCard
+              title="Giá vốn đã bán"
+              value={formatMoney(summary.totals.cogs)}
+              hint={`${numberOrZero(summary.totals.cogsCoverage)}% dòng bán có giá vốn`}
+              icon={Package}
+              tone="amber"
+            />
+            <StatCard
+              title="Lãi gộp ước tính"
+              value={formatMoney(summary.totals.grossProfit)}
+              hint="Doanh thu trừ giá vốn nguyên liệu"
+              icon={TrendingUp}
+              tone={numberOrZero(summary.totals.grossProfit) >= 0 ? "green" : "rose"}
+            />
+            <StatCard
+              title="Biên lãi gộp"
+              value={formatPercent(summary.totals.grossMargin)}
+              hint="Chưa trừ lương, mặt bằng, điện nước"
+              icon={ClipboardList}
+              tone="blue"
+            />
+            <StatCard
+              title="Tiền nhập nguyên liệu"
+              value={formatMoney(summary.totals.totalImportSpend)}
+              hint={`${numberOrZero(summary.totals.importReceipts)} phiếu nhập trong kỳ`}
+              icon={CreditCard}
+              tone="violet"
+            />
+            <StatCard
+              title="Giá trị tồn kho"
+              value={formatMoney(summary.totals.inventoryValue)}
+              hint="Theo totalCost hiện tại của nguyên liệu"
+              icon={Package}
+              tone="slate"
+            />
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             <StatCard
               title="Doanh thu đã thanh toán"
-              value={formatCurrencyVN(summary.totals.revenue)}
+              value={formatMoney(summary.totals.revenue)}
               hint={`${summary.totals.paidOrders} đơn đã thanh toán`}
               icon={TrendingUp}
               tone="green"
@@ -262,7 +316,7 @@ export default function Dashboard() {
             <StatCard
               title="Cảnh báo kho"
               value={summary.totals.lowStockIngredients}
-              hint="Nguyên liệu còn tối đa 100 đơn vị"
+              hint="g/ml <= 1000, cái <= 10"
               icon={AlertTriangle}
               tone="amber"
             />
@@ -294,7 +348,8 @@ export default function Dashboard() {
             />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            <BreakdownTable title="Hiệu quả kinh doanh" rows={financialRows} />
             <BreakdownTable title="Trạng thái đơn hàng" rows={orderStatusRows} />
             <BreakdownTable title="Trạng thái thanh toán" rows={paymentRows} />
             <BreakdownTable title="Vận hành" rows={operationRows} />
@@ -319,6 +374,12 @@ export default function Dashboard() {
                       <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
                         Doanh thu
                       </th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                        Giá vốn
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                        Lãi gộp
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -329,13 +390,19 @@ export default function Dashboard() {
                         </td>
                         <td className="px-4 py-3 text-sm text-right">{item.quantity}</td>
                         <td className="px-4 py-3 text-sm text-right font-semibold text-green-600">
-                          {formatCurrencyVN(item.revenue)}
+                          {formatMoney(item.revenue)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right">
+                          {formatMoney(item.cogs)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">
+                          {formatMoney(item.grossProfit)}
                         </td>
                       </tr>
                     ))}
                     {summary.topProducts.length === 0 && (
                       <tr>
-                        <td colSpan="3" className="px-4 py-8 text-center text-gray-500">
+                        <td colSpan="5" className="px-4 py-8 text-center text-gray-500">
                           Chưa có dữ liệu bán hàng trong khoảng ngày này
                         </td>
                       </tr>
@@ -361,6 +428,9 @@ export default function Dashboard() {
                         Tồn kho
                       </th>
                       <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                        Ngưỡng
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
                         Trạng thái
                       </th>
                     </tr>
@@ -373,6 +443,9 @@ export default function Dashboard() {
                         </td>
                         <td className="px-4 py-3 text-sm text-right">
                           {item.quantity} {item.unit}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right">
+                          {item.lowStockLimit || 100} {item.unit}
                         </td>
                         <td className="px-4 py-3 text-sm text-right">
                           <span
@@ -389,7 +462,7 @@ export default function Dashboard() {
                     ))}
                     {summary.lowStockIngredients.length === 0 && (
                       <tr>
-                        <td colSpan="3" className="px-4 py-8 text-center text-gray-500">
+                        <td colSpan="4" className="px-4 py-8 text-center text-gray-500">
                           Không có nguyên liệu dưới ngưỡng cảnh báo
                         </td>
                       </tr>
@@ -440,7 +513,7 @@ export default function Dashboard() {
                         {statusLabels[order.status] || order.status}
                       </td>
                       <td className="px-4 py-3 text-sm font-semibold text-green-600">
-                        {formatCurrencyVN(order.totalPrice)}
+                        {formatMoney(order.totalPrice)}
                       </td>
                     </tr>
                   ))}

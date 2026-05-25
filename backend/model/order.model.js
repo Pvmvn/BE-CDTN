@@ -32,6 +32,21 @@ const orderSchema = new mongoose.Schema(
         quantity: { type: Number, required: true },
         price: { type: Number, required: true },
         note: { type: String, default: "" },
+        ingredientUsages: [
+          {
+            ingredientId: {
+              type: mongoose.Schema.Types.ObjectId,
+              ref: "Ingredient",
+              required: true,
+            },
+            ingredientName: { type: String, required: true },
+            unit: { type: String, required: true },
+            quantity: { type: Number, required: true, min: 0 },
+            pricePerUnit: { type: Number, required: true, min: 0 },
+            totalCost: { type: Number, required: true, min: 0 },
+            _id: false,
+          },
+        ],
       },
     ],
 
