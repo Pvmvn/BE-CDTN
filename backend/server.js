@@ -2,7 +2,9 @@ import 'dotenv/config';
 import express from 'express';
 import cors from "cors";
 import http from "http";
+import path from "path";
 import { Server } from "socket.io";
+import { fileURLToPath } from "url";
 import { connectDB } from './config/db.js';
 import { watchOrders } from './config/orderWatcher.js';
 import { watchReservations } from './config/reservationWatcher.js';
@@ -23,9 +25,12 @@ import importReceiptRouter from './router/importReceipt.router.js';
 import reserVationRouter from './router/reservation.router.js';
 import dashboardRouter from './router/dashboard.router.js';
 import aiRouter from './router/ai.router.js';
+import uploadRouter from './router/upload.router.js';
 
 const app = express();
 const server = http.createServer(app); 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const io = new Server(server, {
   cors: {
@@ -41,6 +46,10 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 app.use(cors());
+app.use(
+  "/uploads",
+  express.static(path.resolve(__dirname, "../frontend/public/uploads"))
+);
 
 // ---- Router ----
 app.use("/api/auth", authRouter);
@@ -60,6 +69,7 @@ app.use("/api/import-receipts", importReceiptRouter);
 app.use("/api/reservations", reserVationRouter);
 app.use("/api/dashboard", dashboardRouter);
 app.use("/api/ai", aiRouter);
+app.use("/api/uploads", uploadRouter);
 
 // ---- Socket.IO logic ----
 io.on("connection", (socket) => {

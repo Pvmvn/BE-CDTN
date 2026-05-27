@@ -34,14 +34,23 @@ export const updateCategory = async (req, res) => {
     const { id } = req.params;
     const { name, image } = req.body;
 
+    if (!name || !name.trim()) {
+      return res.status(400).json({ message: "Tên loại sản phẩm không được để trống" });
+    }
+
+    if (typeof image !== "string" || !image.trim()) {
+      return res.status(400).json({ message: "Ảnh loại sản phẩm không được để trống" });
+    }
+
     // Kiểm tra category tồn tại
     const category = await ProductCategory.findById(id);
     if (!category)
       return res.status(404).json({ message: "Không tìm thấy loại sản phẩm" });
 
     // Kiểm tra tên trùng với category khác
+    const slug = slugify(name, { lower: true, strict: true, locale: "vi" });
     const existingCategory = await ProductCategory.findOne({
-      name: name.trim(),
+      slug,
       _id: { $ne: id } // bỏ qua category hiện tại
     });
 

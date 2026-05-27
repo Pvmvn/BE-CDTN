@@ -260,7 +260,7 @@ export const recommendProducts = async (req, res) => {
           };
         });
     } catch (error) {
-      if (error.statusCode !== 429) throw error;
+      if (error.statusCode !== 429 && error.statusCode !== 503) throw error;
       recommendations = buildFallbackRecommendations(products, orders);
     }
 
@@ -336,7 +336,7 @@ ${message.trim()}
     try {
       reply = await callGemini(prompt);
     } catch (error) {
-      if (error.statusCode !== 429) throw error;
+      if (error.statusCode !== 429 && error.statusCode !== 503) throw error;
       reply = buildFallbackChatReply(message, products);
     }
 

@@ -50,10 +50,10 @@ const ModalCreateProductCategory = ({
     >
       <div className="overflow-hidden rounded-md w-full flex flex-col select-none">
         <div className="w-full bg-green-600 text-white py-3 px-4 relative border-b-1 border-b-gray-400">
-          <p className="font-bold text-xl">Thêm danh loại sản phẩm mới</p>
+          <p className="font-bold text-xl">Thêm danh mục sản phẩm mới</p>
         </div>
         <div className="py-8 px-4 space-y-4">
-          <p>Tên loại sản phẩm *</p>
+          <p>Tên danh mục sản phẩm *</p>
           <input
             type="text"
             value={createNameCategory}
@@ -63,8 +63,8 @@ const ModalCreateProductCategory = ({
           />
         </div>
         <div className="mb-4 px-4 space-y-4">
-          <label className="font-medium">Ảnh bài viết</label>
-          <p className="text-xs">Chọn 1 ảnh minh họa loại sản phẩm</p>
+          <label className="font-medium">Ảnh danh mục sản phẩm</label>
+          <p className="text-xs">Chọn 1 ảnh minh họa danh mục sản phẩm</p>
           <input
             type="file"
             ref={inputRef}
@@ -79,7 +79,7 @@ const ModalCreateProductCategory = ({
             <div className="relative inline-block">
               <img
                 src={selectedFile[0]}
-                alt="ảnh bài viết"
+                alt="ảnh danh mục sản phẩm"
                 className="w-16 h-16 object-cover rounded"
               />
               <IoIosRemoveCircle

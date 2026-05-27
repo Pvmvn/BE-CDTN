@@ -142,7 +142,7 @@ const ModalCreateBlog = ({
     >
       <div className="overflow-hidden rounded-md w-full flex flex-col select-none">
         <div className="w-full bg-green-600 text-white py-3 px-4 relative border-b-1 border-b-gray-400">
-          <p className="font-bold text-xl">Thêm danh loại sản phẩm mới</p>
+          <p className="font-bold text-xl">Thêm bài viết mới</p>
         </div>
         {/* Tiêu đề */}
         <div className="mb-4 p-4">
@@ -158,7 +158,7 @@ const ModalCreateBlog = ({
 
         {/* Danh mục */}
         <div className="mb-4 p-4">
-          <label className="font-medium">Danh mục*</label>
+          <label className="font-medium">Danh mục bài viết*</label>
           <select
             className="w-full border px-3 py-2 rounded"
             value={selectedCategory.id}

@@ -78,6 +78,10 @@ export default function ProductCategory() {
   // Cập nhật loại sản phẩm
   const handleUpdateCategory = async (id, newName) => {
     if (isLoading) return toast.warning("Loại sản phẩm đang được cập nhập");
+    if (!newName.trim())
+      return toast.error("Tên loại sản phẩm không được để trống");
+    if (selectedFile.length === 0)
+      return toast.error("Ảnh loại sản phẩm không được để trống");
     try {
       let imageUrl = selectedFile[0];
       setIsLoading(true);
