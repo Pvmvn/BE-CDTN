@@ -86,6 +86,32 @@ const numberOrZero = (value) => Number(value) || 0;
 const formatMoney = (value) => formatCurrencyVN(numberOrZero(value));
 const formatPercent = (value) => `${numberOrZero(value)}%`;
 
+const getQuickDateRange = (type) => {
+  const today = new Date();
+  const todayStr = getTodayString();
+
+  if (type === "today") {
+    return { startDate: todayStr, endDate: todayStr };
+  }
+
+  if (type === "yesterday") {
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split("T")[0];
+    return { startDate: yesterdayStr, endDate: yesterdayStr };
+  }
+
+  if (type === "week") {
+    const weekAgo = new Date(today);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    return { startDate: weekAgo.toISOString().split("T")[0], endDate: todayStr };
+  }
+
+  const monthAgo = new Date(today);
+  monthAgo.setMonth(monthAgo.getMonth() - 1);
+  return { startDate: monthAgo.toISOString().split("T")[0], endDate: todayStr };
+};
+
 export default function Dashboard() {
   // Các state lưu trữ dữ liệu thống kê, trạng thái loading và bộ lọc thời gian
   const [summary, setSummary] = useState(null);
@@ -121,38 +147,20 @@ export default function Dashboard() {
     []
   );
 
+  const activeQuickDateKey = useMemo(
+    () =>
+      quickDateRanges.find((item) => {
+        const range = getQuickDateRange(item.key);
+        return range.startDate === startDate && range.endDate === endDate;
+      })?.key,
+    [endDate, quickDateRanges, startDate]
+  );
+
   // Xử lý khi người dùng click vào các nút chọn ngày nhanh
   const handleQuickDate = (type) => {
-    const today = new Date();
-    const todayStr = getTodayString();
-
-    if (type === "today") {
-      setStartDate(todayStr);
-      setEndDate(todayStr);
-      return;
-    }
-
-    if (type === "yesterday") {
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayStr = yesterday.toISOString().split("T")[0];
-      setStartDate(yesterdayStr);
-      setEndDate(yesterdayStr);
-      return;
-    }
-
-    if (type === "week") {
-      const weekAgo = new Date(today);
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      setStartDate(weekAgo.toISOString().split("T")[0]);
-      setEndDate(todayStr);
-      return;
-    }
-
-    const monthAgo = new Date(today);
-    monthAgo.setMonth(monthAgo.getMonth() - 1);
-    setStartDate(monthAgo.toISOString().split("T")[0]);
-    setEndDate(todayStr);
+    const range = getQuickDateRange(type);
+    setStartDate(range.startDate);
+    setEndDate(range.endDate);
   };
 
   // Chuẩn bị dữ liệu cho các bảng BreakdownTable từ dữ liệu API trả về
@@ -242,16 +250,26 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2 mt-4">
-          {quickDateRanges.map((item) => (
-            <button
-              key={item.key}
-              onClick={() => handleQuickDate(item.key)}
-              className="px-3 py-1.5 text-sm font-medium border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              {item.label}
-            </button>
-          ))}
+        <div className="grid grid-cols-2 sm:inline-grid sm:grid-cols-4 gap-2 mt-4">
+          {quickDateRanges.map((item) => {
+            const isActive = activeQuickDateKey === item.key;
+
+            return (
+              <button
+                key={item.key}
+                type="button"
+                aria-pressed={isActive}
+                onClick={() => handleQuickDate(item.key)}
+                className={`h-9 min-w-[96px] px-3 text-sm font-semibold border rounded-lg transition-colors ${
+                  isActive
+                    ? "border-green-600 bg-green-600 text-white shadow-sm"
+                    : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                {item.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
