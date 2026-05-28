@@ -1,12 +1,6 @@
 {
   "type": "module",
-  "scripts": {
-    "fix:business-data": "node scripts/fixBusinessData.js",
-    "fix:business-data:dry": "node scripts/fixBusinessData.js --dry-run",
-    "migrate:cloudinary-images": "node scripts/migrateCloudinaryImages.js",
-    "migrate:cloudinary-images:dry": "node scripts/migrateCloudinaryImages.js --dry-run",
-    "migrate:cloudinary-images:all": "node scripts/migrateCloudinaryImages.js --all"
-  },
+  "scripts": {},
   "dependencies": {
     "axios": "^1.13.2",
     "bcryptjs": "^3.0.2",

@@ -52,7 +52,7 @@ import Recipes from "./page/admin/Recipes";
 import Orders from "./page/admin/Orders";
 import Vouchers from "./page/admin/Vouchers";
 import Contacts from "./page/admin/Contacts";
-import ImportReceipts from "./page/admin/importReceipts";
+import ImportReceipts from "./page/admin/ImportReceipts";
 import Reservations from "./page/admin/Reservations";
 
 function App() {

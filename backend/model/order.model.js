@@ -89,5 +89,15 @@ const orderSchema = new mongoose.Schema(
 
 // Compound index để truy vấn nhanh userId + voucherCode
 orderSchema.index({ userId: 1, voucherId: 1 });
+orderSchema.index(
+  { pagerNumber: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      status: "PROCESSING",
+      pagerNumber: { $type: "number" },
+    },
+  }
+);
 const Order = mongoose.model("Order", orderSchema);
 export default Order;

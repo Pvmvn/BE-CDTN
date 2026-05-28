@@ -129,6 +129,11 @@ export const createOrderOffline = async (req, res) => {
     });
   } catch (err) {
     await session.abortTransaction();
+    if (err?.code === 11000 && err?.keyPattern?.pagerNumber) {
+      return res.status(400).json({
+        message: `The so ${req.body?.pagerNumber} dang duoc su dung`,
+      });
+    }
     console.error("CREATE OFFLINE ORDER ERROR:", err);
     res.status(500).json({
       message: "Tạo đơn offline thất bại",

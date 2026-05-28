@@ -9,7 +9,6 @@ export const watchReservations = (io) => {
       const reservation = reservationId
         ? await Reservation.findById(reservationId)
         : null;
-
       io.to("admin_room").emit("reservation_changed", {
         type: change.operationType, // insert | update | delete
         reservationId,

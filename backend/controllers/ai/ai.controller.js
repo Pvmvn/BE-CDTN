@@ -5,19 +5,22 @@ const MAX_PRODUCTS_FOR_PROMPT = 40;
 const MAX_ORDERS_FOR_PROMPT = 12;
 const MAX_RECOMMENDATIONS = 5;
 
+// Hàm trích xuất dữ liệu JSON hợp lệ từ chuỗi văn bản trả về của AI
 const extractJson = (text) => {
   if (!text) return null;
-
+  // Tìm nội dung nằm trong cặp dấu ``` (ví dụ: ```json ... ```)
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
   const raw = fenced ? fenced[1] : text;
+  // Xác định vị trí bắt đầu và kết thúc của mảng JSON
   const start = raw.indexOf("[");
   const end = raw.lastIndexOf("]");
-
+  
   if (start === -1 || end === -1 || end <= start) return null;
   return JSON.parse(raw.slice(start, end + 1));
 };
-
+// Xây dựng prompt (câu lệnh) gửi cho AI để yêu cầu gợi ý món
 const buildPrompt = ({ userName, products, orders }) => {
+  // Rút gọn thông tin sản phẩm để giảm số lượng token gửi lên AI
   const productList = products.map((product) => ({
     productId: product._id.toString(),
     name: product.name,
@@ -25,7 +28,7 @@ const buildPrompt = ({ userName, products, orders }) => {
     price: product.price,
     discount: product.discount || 0,
   }));
-
+  // Lấy lịch sử đặt hàng của user
   const orderHistory = orders.map((order) => ({
     createdAt: order.createdAt,
     items: order.items.map((item) => ({
@@ -73,10 +76,12 @@ const getDiscountedPrice = (product) => {
   return Math.round(product.price * (1 - (product.discount || 0) / 100));
 };
 
+// Hàm gợi ý dự phòng (fallback) chạy cục bộ khi API Gemini bị lỗi hoặc hết quota
 const buildFallbackRecommendations = (products, orders) => {
   const orderedCount = new Map();
   const orderedCategoryCount = new Map();
 
+  // Đếm số lượng sản phẩm và danh mục đã từng mua
   orders.forEach((order) => {
     order.items.forEach((item) => {
       const productId = item.productId?.toString();
@@ -85,6 +90,7 @@ const buildFallbackRecommendations = (products, orders) => {
     });
   });
 
+  // Tính tổng số lượng đã mua theo danh mục
   products.forEach((product) => {
     const productId = product._id.toString();
     const categoryName = product.productCategoryId?.name || "";
@@ -96,6 +102,7 @@ const buildFallbackRecommendations = (products, orders) => {
     }
   });
 
+  // Chấm điểm từng sản phẩm dựa trên: số lượng mua, danh mục đã mua, giảm giá, và độ mới
   const scoredProducts = products.map((product) => {
     const productId = product._id.toString();
     const categoryName = product.productCategoryId?.name || "";
@@ -110,6 +117,7 @@ const buildFallbackRecommendations = (products, orders) => {
     };
   });
 
+  // Sắp xếp theo điểm giảm dần và chọn ra tối đa MAX_RECOMMENDATIONS món
   return scoredProducts
     .sort((a, b) => b.score - a.score)
     .slice(0, MAX_RECOMMENDATIONS)
@@ -164,6 +172,7 @@ const buildFallbackChatReply = (message, products) => {
   return `Hiện tôi gợi ý ${names}. Gemini đang hết quota nên tôi đang tư vấn theo dữ liệu menu có sẵn.`;
 };
 
+// Hàm gọi API của Google Gemini để lấy phản hồi
 const callGemini = async (prompt, { responseMimeType = "text/plain" } = {}) => {
   const apiKey = process.env.GEMINI_API_KEY;
   const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
@@ -174,6 +183,7 @@ const callGemini = async (prompt, { responseMimeType = "text/plain" } = {}) => {
     throw error;
   }
 
+  // Gọi API REST của Gemini
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const response = await fetch(url, {
     method: "POST",
@@ -198,6 +208,7 @@ const callGemini = async (prompt, { responseMimeType = "text/plain" } = {}) => {
 
   const data = await response.json();
 
+  // Xử lý lỗi nếu API trả về thất bại
   if (!response.ok) {
     const message = data?.error?.message || "Gemini khong tra ve ket qua hop le";
     const error = new Error(message);
@@ -205,13 +216,16 @@ const callGemini = async (prompt, { responseMimeType = "text/plain" } = {}) => {
     throw error;
   }
 
+  // Lấy text phản hồi từ AI
   return data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
 };
 
+// API: Đề xuất món ăn/đồ uống cho người dùng
 export const recommendProducts = async (req, res) => {
   try {
     const userId = req.user.id;
 
+    // Lấy song song danh sách sản phẩm và lịch sử mua hàng của user
     const [products, orders] = await Promise.all([
       Product.find({ status: true })
         .populate("productCategoryId", "name")
@@ -231,6 +245,7 @@ export const recommendProducts = async (req, res) => {
     let recommendations;
 
     try {
+      // Xây dựng câu lệnh (prompt) và gọi AI để lấy danh sách món gợi ý
       const prompt = buildPrompt({
         userName: req.user.name,
         products,
@@ -243,6 +258,7 @@ export const recommendProducts = async (req, res) => {
         return res.status(502).json({ message: "AI tra ve dinh dang khong hop le" });
       }
 
+      // Khớp dữ liệu AI trả về với dữ liệu sản phẩm trong CSDL
       const productMap = new Map(products.map((product) => [product._id.toString(), product]));
       const seen = new Set();
 
@@ -256,10 +272,11 @@ export const recommendProducts = async (req, res) => {
             product,
             reason: String(item.reason || "Phu hop voi so thich dat mon cua ban").slice(0, 160),
             score: Math.max(0, Math.min(1, Number(item.score) || 0)),
-            source: "gemini",
+            source: "gemini", // Đánh dấu nguồn gợi ý từ AI
           };
         });
     } catch (error) {
+      // Nếu API báo hết quota (429) hoặc server lỗi (503), tự động dùng thuật toán dự phòng
       if (error.statusCode !== 429 && error.statusCode !== 503) throw error;
       recommendations = buildFallbackRecommendations(products, orders);
     }
@@ -276,6 +293,7 @@ export const recommendProducts = async (req, res) => {
   }
 };
 
+// API: Trò chuyện với trợ lý AI
 export const chatWithCoffeeAssistant = async (req, res) => {
   try {
     const { message } = req.body;
@@ -284,6 +302,7 @@ export const chatWithCoffeeAssistant = async (req, res) => {
       return res.status(400).json({ message: "Vui long nhap noi dung can hoi" });
     }
 
+    // Lấy thông tin sản phẩm và lịch sử mua hàng để tạo context
     const [products, orders] = await Promise.all([
       Product.find({ status: true })
         .populate("productCategoryId", "name")
@@ -296,6 +315,7 @@ export const chatWithCoffeeAssistant = async (req, res) => {
         .lean(),
     ]);
 
+    // Format gọn lại danh sách sản phẩm
     const productList = products.map((product) => ({
       productId: product._id.toString(),
       name: product.name,
@@ -304,6 +324,7 @@ export const chatWithCoffeeAssistant = async (req, res) => {
       discount: product.discount || 0,
     }));
 
+    // Format gọn lại lịch sử đặt hàng
     const orderHistory = orders.map((order) => ({
       createdAt: order.createdAt,
       items: order.items.map((item) => ({
@@ -334,8 +355,10 @@ ${message.trim()}
     let reply;
 
     try {
+      // Gửi câu hỏi kèm context cho AI để nhận phản hồi
       reply = await callGemini(prompt);
     } catch (error) {
+      // Nếu API AI quá tải (429, 503), tự động kích hoạt tính năng chat dự phòng
       if (error.statusCode !== 429 && error.statusCode !== 503) throw error;
       reply = buildFallbackChatReply(message, products);
     }
