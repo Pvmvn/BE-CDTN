@@ -7,6 +7,16 @@ import ModalConfirm from "../../components/modal/adminReservation/ModalConfirm";
 import { io } from "socket.io-client";
 import playTingSound from "../../utils/playTingSound";
 
+const normalizeSearchText = (value = "") =>
+  value
+    .toString()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[đĐ]/g, (char) => (char === "đ" ? "d" : "D"))
+    .replace(/\s+/g, " ")
+    .toLowerCase()
+    .trim();
+
 export default function Reservations() {
   const [searchTerm, setSearchTerm] = useState("");
   const [reservations, setReservations] = useState([]);
@@ -16,6 +26,7 @@ export default function Reservations() {
   const [isOpenDelete, setIsOpenDelete] = useState(false);
   const [newReservationCount, setNewReservationCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const normalizedSearchTerm = normalizeSearchText(searchTerm);
 
   const getTodayString = () => new Date().toISOString().split("T")[0];
   const [startDate, setStartDate] = useState(getTodayString());
@@ -288,8 +299,8 @@ export default function Reservations() {
             {reservations
               .filter(
                 (r) =>
-                  r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                  r.phone.includes(searchTerm)
+                  normalizeSearchText(r.name).includes(normalizedSearchTerm) ||
+                  normalizeSearchText(r.phone).includes(normalizedSearchTerm)
               )
               .map((r, index) => (
                 <tr key={r._id} className="hover:bg-gray-50">

@@ -5,8 +5,8 @@ const aiApi = {
     const res = await axiosClient.get("/ai/recommend-products");
     return res.data;
   },
-  chat: async (message) => {
-    const res = await axiosClient.post("/ai/chat", { message });
+  chat: async (message, history = []) => {
+    const res = await axiosClient.post("/ai/chat", { message, history });
     return res.data;
   },
 };

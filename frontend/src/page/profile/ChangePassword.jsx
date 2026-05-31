@@ -22,6 +22,14 @@ const ChangePassword = () => {
       setError("Vui lòng nhập đầy đủ thông tin!");
       return;
     }
+    if (newPassword.trim().length < 8) {
+      setError("Mật khẩu phải dài ít nhất 8 ký tự");
+      return;
+    }
+    if (oldPassword === newPassword) {
+      setError("Mật khẩu mới không được trùng với mật khẩu cũ");
+      return;
+    }
     if (newPassword !== confirmNewPassword) {
       setError("Mật khẩu mới không trùng khớp!");
       return;
@@ -44,7 +52,7 @@ const ChangePassword = () => {
         setError(res.message || "Có lỗi xảy ra");
       }
     } catch (err) {
-      setError(err);
+      setError(err?.response?.data?.message || "Có lỗi xảy ra");
     } finally {
       setIsLoading(false);
     }

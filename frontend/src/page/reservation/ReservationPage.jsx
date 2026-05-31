@@ -222,9 +222,9 @@ const ReservationPage = () => {
                     {...register("phone", {
                       required: "Vui lòng nhập số điện thoại",
                       pattern: {
-                        value: /^0[0-9]{9,10}$/,
+                        value: /^0(3|5|7|8|9)\d{8}$/,
                         message:
-                          "Số điện thoại không hợp lệ (phải bắt đầu bằng số 0 và có 10-11 số)",
+                          "Số điện thoại không hợp lệ. Chỉ chấp nhận số, đủ 10 số và bắt đầu bằng đầu số hợp lệ (03, 05, 07, 08, 09)",
                       },
                     })}
                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none transition ${

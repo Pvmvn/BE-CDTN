@@ -30,6 +30,11 @@ const CheckOut = () => {
   const [discount, setDiscount] = useState(0);
   const [voucherUsed, setVoucherUsed] = useState(null);
   const navigate = useNavigate();
+  const unavailableItems = useMemo(
+    () => cart.filter((item) => !item.productId?.status),
+    [cart]
+  );
+  const hasUnavailableItems = unavailableItems.length > 0;
   const {
     register,
     handleSubmit,
@@ -45,6 +50,24 @@ const CheckOut = () => {
   useEffect(() => {
       document.title = `Giỏ hàng`;
   }, []);
+
+  useEffect(() => {
+    const fetchLatestCart = async () => {
+      if (!user?.id) return;
+
+      try {
+        const res = await cartApi.getCart(user.id);
+        const latestItems = res?.items || [];
+        setCart(latestItems);
+        localStorage.setItem("cart", JSON.stringify(latestItems));
+      } catch (error) {
+        console.error("Lỗi tải giỏ hàng mới nhất:", error);
+      }
+    };
+
+    fetchLatestCart();
+  }, [user?.id, setCart]);
+
   useEffect(() => {
     const slots = ["Càng sớm càng tốt", ...getDeliverySlots()];
     setTimeSlots(slots);
@@ -88,6 +111,12 @@ const CheckOut = () => {
       setError("");
     }
   }, [voucherCode]);
+
+  useEffect(() => {
+    if (hasUnavailableItems) {
+      toast.error("Có sản phẩm trong giỏ hàng đã hết hàng");
+    }
+  }, [hasUnavailableItems]);
 
   const handleClickRemoveProduct = async (item) => {
     try {
@@ -136,6 +165,10 @@ const CheckOut = () => {
 
   const handleClickOrder = async (data) => {
     try {
+      if (hasUnavailableItems) {
+        toast.error("Vui lòng xóa sản phẩm hết hàng trước khi đặt hàng");
+        return;
+      }
       const orderData = {
         cartItems: cart.map((item) => ({
           productId: item.productId._id,
@@ -351,6 +384,11 @@ const CheckOut = () => {
             </div>
             <hr className="w-[3rem] border-2 border-orange-600 ml-4" />
             <div className="space-y-2 mt-4 w-full px-4">
+              {hasUnavailableItems && (
+                <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  Có sản phẩm trong giỏ hàng đã hết hàng. Vui lòng xóa các món này trước khi đặt hàng.
+                </div>
+              )}
               {cart.length > 0 &&
                 cart.map((item) => (
                   <div
@@ -366,6 +404,9 @@ const CheckOut = () => {
                       <p>
                         {item.quantity} x {item.productId.name}
                       </p>
+                      {!item.productId.status && (
+                        <p className="font-semibold text-red-600">Hết hàng</p>
+                      )}
                       {item.note && (
                         <p className="whitespace-break-spaces">
                           Note: {item.note}
@@ -460,7 +501,8 @@ const CheckOut = () => {
                 <button
                   type="submit"
                   form="checkoutForm"
-                  className="px-5 py-2 bg-white text-orange-500 rounded-full cursor-pointer"
+                  disabled={hasUnavailableItems}
+                  className="px-5 py-2 bg-white text-orange-500 rounded-full cursor-pointer disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500"
                 >
                   Đặt hàng
                 </button>

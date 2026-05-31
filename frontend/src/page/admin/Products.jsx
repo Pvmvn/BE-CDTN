@@ -12,8 +12,8 @@ const normalizeSearchText = (value = "") =>
     .toString()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/đ/g, "d")
-    .replace(/Đ/g, "D")
+    .replace(/[đĐ]/g, (char) => (char === "đ" ? "d" : "D"))
+    .replace(/\s+/g, " ")
     .toLowerCase()
     .trim();
 
@@ -27,10 +27,11 @@ export default function Products() {
   const [isOpenModalConfirmDelete, setIsOpenModalConfirmDelete] =
     useState(false);
   const [productSelected, setProductSelected] = useState(null);
+
   useEffect(() => {
     document.title = "Quản lý sản phẩm";
   }, []);
-  // Lấy danh sách sản phẩm
+
   useEffect(() => {
     const getAllProducts = async () => {
       try {
@@ -40,10 +41,10 @@ export default function Products() {
         toast.error(error.response?.data?.message || "Lỗi khi tải sản phẩm");
       }
     };
+
     getAllProducts();
   }, []);
 
-  // Xóa sản phẩm
   const handleRemoveProduct = async (id) => {
     try {
       await productApi.delete(id);
@@ -56,7 +57,6 @@ export default function Products() {
     }
   };
 
-  // Toggle tình trạng
   const handleToggleStatus = async (product) => {
     try {
       const updatedStatus = !product.status;
@@ -72,13 +72,19 @@ export default function Products() {
 
       toast.success("Cập nhật trạng thái thành công");
     } catch (err) {
-      toast.error(err.response?.data?.message || "Lỗi khi cập nhật trạng thái");
+      toast.error(
+        err.response?.data?.message || "Lỗi khi cập nhật trạng thái"
+      );
     }
   };
 
+  const normalizedSearchTerm = normalizeSearchText(searchTerm);
+  const filteredProducts = products.filter((product) =>
+    normalizeSearchText(product.name).includes(normalizedSearchTerm)
+  );
+
   return (
     <div className="w-full mx-auto bg-white rounded-lg shadow-sm">
-      {/* Header */}
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -98,7 +104,6 @@ export default function Products() {
           </button>
         </div>
 
-        {/* Ô tìm kiếm */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
           <input
@@ -111,7 +116,6 @@ export default function Products() {
         </div>
       </div>
 
-      {/* Bảng danh sách */}
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gray-50 border-b">
@@ -137,80 +141,67 @@ export default function Products() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y">
-            {products
-              .filter((p) =>
-                normalizeSearchText(p.name).includes(
-                  normalizeSearchText(searchTerm)
-                )
-              )
-              .map((product, index) => (
-                <tr key={product._id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm">{index + 1}</td>
-                  <td className="px-6 py-4 text-sm truncate max-w-[200px]">
-                    {product.name}
-                  </td>
-                  <td className="px-6 py-4 text-sm">
-                    {product.productCategoryId?.name || "—"}
-                  </td>
-                  <td className="px-6 py-4">
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="w-16 h-16 object-cover rounded-xl"
-                    />
-                  </td>
-                  <td className="px-6 py-4 text-sm truncate max-w-[160px]">
-                    {formatCurrencyVN(product.price)}
-                  </td>
-                  <td className="px-6 py-4 text-sm truncate max-w-[160px]">
-                    {product.description}
-                  </td>
-                  <td className="px-6 py-4 text-sm">{product.discount}%</td>
-
-                  {/* Nút toggle tình trạng */}
-                  <td className="px-6 py-4 text-sm">
+            {filteredProducts.map((product, index) => (
+              <tr key={product._id} className="hover:bg-gray-50">
+                <td className="px-6 py-4 text-sm">{index + 1}</td>
+                <td className="px-6 py-4 text-sm truncate max-w-[200px]">
+                  {product.name}
+                </td>
+                <td className="px-6 py-4 text-sm">
+                  {product.productCategoryId?.name || "—"}
+                </td>
+                <td className="px-6 py-4">
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="w-16 h-16 object-cover rounded-xl"
+                  />
+                </td>
+                <td className="px-6 py-4 text-sm truncate max-w-[160px]">
+                  {formatCurrencyVN(product.price)}
+                </td>
+                <td className="px-6 py-4 text-sm truncate max-w-[160px]">
+                  {product.description}
+                </td>
+                <td className="px-6 py-4 text-sm">{product.discount}%</td>
+                <td className="px-6 py-4 text-sm">
+                  <button
+                    onClick={() => handleToggleStatus(product)}
+                    className={`${
+                      product.status ? "bg-green-600" : "bg-red-600"
+                    } text-white cursor-pointer px-4 py-2 whitespace-nowrap rounded-lg transition-colors`}
+                  >
+                    {product.status ? "Còn hàng" : "Hết hàng"}
+                  </button>
+                </td>
+                <td className="px-6 py-4 text-sm">
+                  <div className="flex items-center space-x-4">
                     <button
-                      onClick={() => handleToggleStatus(product)}
-                      className={`${
-                        product.status ? "bg-green-600" : "bg-red-600"
-                      } text-white cursor-pointer px-4 py-2 whitespace-nowrap rounded-lg transition-colors`}
+                      className="text-blue-600 hover:text-blue-800 cursor-pointer"
+                      onClick={() => {
+                        setProductSelected(product);
+                        setIsOpenModalUpdateProduct(true);
+                      }}
                     >
-                      {product.status ? "Còn hàng" : "Hết hàng"}
+                      <Edit2 className="w-4 h-4" />
                     </button>
-                  </td>
-
-                  <td className="px-6 py-4 text-sm">
-                    <div className="flex items-center space-x-4">
-                      {/* Nút sửa */}
-                      <button
-                        className="text-blue-600 hover:text-blue-800 cursor-pointer"
-                        onClick={() => {
-                          setProductSelected(product);
-                          setIsOpenModalUpdateProduct(true);
-                        }}
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-
-                      {/* Nút xóa */}
-                      <button
-                        className="text-red-600 hover:text-red-800 cursor-pointer"
-                        onClick={() => {
-                          setProductSelected(product);
-                          setIsOpenModalConfirmDelete(true);
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    <button
+                      className="text-red-600 hover:text-red-800 cursor-pointer"
+                      onClick={() => {
+                        setProductSelected(product);
+                        setIsOpenModalConfirmDelete(true);
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
 
-      {/* Modal thêm sản phẩm */}
       {isOpenModalCreateProduct && (
         <ModalCreateProduct
           isOpenModalCreateProduct={isOpenModalCreateProduct}
@@ -219,7 +210,6 @@ export default function Products() {
         />
       )}
 
-      {/* Modal cập nhật sản phẩm */}
       {isOpenModalUpdateProduct && productSelected && (
         <ModalUpdateProduct
           isOpenModalUpdateProduct={isOpenModalUpdateProduct}
@@ -229,7 +219,6 @@ export default function Products() {
         />
       )}
 
-      {/* Modal xác nhận xóa */}
       {isOpenModalConfirmDelete && (
         <ModalConfirmDelete
           content={`Bạn có chắn chắn muốn xóa sản phẩm ${productSelected.name}?`}

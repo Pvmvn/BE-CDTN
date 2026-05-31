@@ -7,6 +7,16 @@ import ModalCreateBlogCategory from "../../components/modal/adminBlogCategory/Mo
 import ModalUpdateBlogCategory from "../../components/modal/adminBlogCategory/ModalUpdateBlogCategory";
 import ModalConfirmDelete from "../../components/modal/ModalConfirmDelete";
 
+const normalizeSearchText = (value = "") =>
+  value
+    .toString()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[đĐ]/g, (char) => (char === "đ" ? "d" : "D"))
+    .replace(/\s+/g, " ")
+    .toLowerCase()
+    .trim();
+
 export default function BlogCategory() {
   const [searchTerm, setSearchTerm] = useState("");
   const [categories, setCategories] = useState([]);
@@ -18,6 +28,7 @@ export default function BlogCategory() {
   const [currentCategoryId, setCurrentCategoryId] = useState(null);
   const [updateCategoryName, setUpdateCategoryName] = useState("");
   const [createNameCategory, setCreateNameCategory] = useState("");
+  const normalizedSearchTerm = normalizeSearchText(searchTerm);
   useEffect(() => {
     document.title = "Quản lý loại bài viết";
   }, []);
@@ -57,6 +68,11 @@ export default function BlogCategory() {
     }
   };
   const handleUpdateCategory = async (id, newName) => {
+    if (!newName.trim()) {
+      toast.error("Tên danh mục không được để trống");
+      return;
+    }
+
     try {
       await blogCategoryApi.update(id, { name: newName });
       setCategories((prev) =>
@@ -146,7 +162,7 @@ export default function BlogCategory() {
           <tbody className="bg-white divide-y divide-gray-200">
             {categories
               .filter((category) =>
-                category.name.toLowerCase().includes(searchTerm.toLowerCase())
+                normalizeSearchText(category.name).includes(normalizedSearchTerm)
               )
               .map((category, index) => (
                 <tr key={category._id} className="hover:bg-gray-50">

@@ -6,6 +6,13 @@ import ModalConfirmDelete from "../../components/modal/ModalConfirmDelete";
 import ModalUpdateRoleUser from "../../components/modal/adminUser/ModalUpdateRoleUser";
 import ModalUpdateUser from "../../components/modal/adminUser/ModalUpdateUser";
 
+const normalizeSearchText = (value = "") =>
+  value
+    .toString()
+    .replace(/\s+/g, " ")
+    .toLowerCase()
+    .trim();
+
 export default function Users() {
   const [searchTerm, setSearchTerm] = useState("");
   const [users, setUsers] = useState([]);
@@ -15,6 +22,7 @@ export default function Users() {
   const [isOpenModalUpdateUser, setIsOpenModalUpdateUser] = useState(false);
   const [isOpenConfirmDelete, setIsOpenConfirmDelete] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+  const normalizedSearchTerm = normalizeSearchText(searchTerm);
 
   useEffect(() => {
     document.title = "Quản lý người dùng";
@@ -167,7 +175,9 @@ export default function Users() {
           <tbody className="bg-white divide-y">
             {users
               .filter((user) =>
-                user?.email?.toLowerCase().includes(searchTerm.toLowerCase())
+                normalizeSearchText(user?.email || "").includes(
+                  normalizedSearchTerm
+                )
               )
               .map((user, index) => (
                 <tr key={user._id} className="hover:bg-gray-50">

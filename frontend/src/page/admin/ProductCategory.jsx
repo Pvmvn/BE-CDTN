@@ -9,6 +9,16 @@ import usePreviewImage from "../../hooks/usePreviewImage";
 import useUpAndGetLinkImage from "../../hooks/useUpAndGetLinkImage";
 import ModalUpdateProductCategory from "../../components/modal/adminProductCategory/ModalUpdateProductCategory";
 
+const normalizeSearchText = (value = "") =>
+  value
+    .toString()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[đĐ]/g, (char) => (char === "đ" ? "d" : "D"))
+    .replace(/\s+/g, " ")
+    .toLowerCase()
+    .trim();
+
 export default function ProductCategory() {
   const [searchTerm, setSearchTerm] = useState("");
   const [categories, setCategories] = useState([]);
@@ -25,6 +35,7 @@ export default function ProductCategory() {
     usePreviewImage(1);
   const { handleImageUpload } = useUpAndGetLinkImage();
   const [isLoading, setIsLoading] = useState(false);
+  const normalizedSearchTerm = normalizeSearchText(searchTerm);
   useEffect(() => {
     document.title = "Quản lý loại sản phẩm";
   }, []);
@@ -192,7 +203,7 @@ export default function ProductCategory() {
           <tbody className="bg-white divide-y">
             {categories
               .filter((c) =>
-                c.name.toLowerCase().includes(searchTerm.toLowerCase())
+                normalizeSearchText(c.name).includes(normalizedSearchTerm)
               )
               .map((category, index) => (
                 <tr key={category._id} className="hover:bg-gray-50">

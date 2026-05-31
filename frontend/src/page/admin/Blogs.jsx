@@ -9,6 +9,16 @@ import ModalCreateBlog from "../../components/modal/blog/ModalCreateBlog";
 import ModalConfirmDelete from "../../components/modal/ModalConfirmDelete";
 import ModalUpdateBlog from "../../components/modal/blog/ModalUpdateBlog";
 
+const normalizeSearchText = (value = "") =>
+  value
+    .toString()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[đĐ]/g, (char) => (char === "đ" ? "d" : "D"))
+    .replace(/\s+/g, " ")
+    .toLowerCase()
+    .trim();
+
 export default function BlogCategory() {
   const [searchTerm, setSearchTerm] = useState("");
   const [allBlogs, setAllBlogs] = useState([]);
@@ -18,6 +28,7 @@ export default function BlogCategory() {
   const [isOpenModalUpdateBlog, setIsOpenModalUpdateBlog] = useState(false);
   const [blogToUpdate, setBlogToUpdate] = useState(null);
   const [isOpenConfirmDelete, setIsOpenConfirmDelete] = useState(false);
+  const normalizedSearchTerm = normalizeSearchText(searchTerm);
   useEffect(() => {
     document.title = "Quản lý bài viết";
   }, []);
@@ -106,7 +117,7 @@ export default function BlogCategory() {
           <tbody className="bg-white divide-y divide-gray-200">
             {allBlogs
               .filter((blog) =>
-                blog.title.toLowerCase().includes(searchTerm.toLowerCase())
+                normalizeSearchText(blog.title).includes(normalizedSearchTerm)
               )
               .map((blog, index) => (
                 <tr key={blog._id} className="hover:bg-gray-50">

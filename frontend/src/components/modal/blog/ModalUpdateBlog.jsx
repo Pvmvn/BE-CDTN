@@ -24,7 +24,13 @@ const ModalUpdateBlog = ({
   const [title, setTitle] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const { selectedFile, handleImageChange, setSelectedFile } = usePreviewImage(3);
+  const {
+    selectedFile,
+    selectedFileNames,
+    handleImageChange,
+    setSelectedFile,
+    setSelectedFileNames,
+  } = usePreviewImage(3);
   const { handleImageUpload } = useUpAndGetLinkImage();
 
   const [introHighlight, setIntroHighlight] = useState("");
@@ -61,6 +67,9 @@ const ModalUpdateBlog = ({
         ? [blogData.images]
         : [];
       setSelectedFile(imagesArray);
+      setSelectedFileNames(
+        imagesArray.map((_, index) => `Ảnh hiện tại ${index + 1}`)
+      );
       setIntroHighlight(blogData.content?.intro?.highlight || "");
       setIntroText(blogData.content?.intro?.text || "");
       setBodyHighlight(blogData.content?.body?.highlight || "");
@@ -73,7 +82,11 @@ const ModalUpdateBlog = ({
   // Xóa ảnh khỏi preview
   const handleRemoveImage = (indexImage) => {
     const newSelectedFile = selectedFile.filter((_, i) => i !== indexImage);
+    const newSelectedFileNames = selectedFileNames.filter(
+      (_, i) => i !== indexImage
+    );
     setSelectedFile(newSelectedFile);
+    setSelectedFileNames(newSelectedFileNames);
   };
 
   //  Cập nhật blog
@@ -210,11 +223,20 @@ const ModalUpdateBlog = ({
         {/* Upload ảnh */}
         <div className="mb-4 space-x-4">
           <label className="font-medium">Ảnh bài viết</label>
-          <input
-            type="file"
-            onChange={handleImageChange}
-            className="mt-1 border-1 px-2 cursor-pointer"
-          />
+          <label className="mt-1 inline-flex cursor-pointer items-center gap-3 rounded-xs border px-3 py-2">
+            <span className="rounded bg-gray-100 px-3 py-1">Chọn tệp</span>
+            <span className="text-sm text-gray-600">
+              {selectedFileNames.length > 0
+                ? selectedFileNames.join(", ")
+                : "Chưa có tệp nào được chọn"}
+            </span>
+            <input
+              type="file"
+              onChange={handleImageChange}
+              className="hidden"
+              accept="image/*"
+            />
+          </label>
           <div className="flex flex-wrap gap-2 mt-2 bg-gray-200 p-2 rounded-md">
             {selectedFile.map((image, index) => (
               <div key={index} className="relative inline-block">

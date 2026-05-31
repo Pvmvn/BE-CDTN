@@ -25,8 +25,8 @@ const ShopPage = () => {
             <FaStore className="text-xl" />
             <span className="text-sm font-medium">Three Star</span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold mb-2">Cửa Hàng Bạch Đằng</h1>
-          <p className="text-lg text-orange-600">Đà Nẵng - Hải Châu</p>
+          <h1 className="text-4xl md:text-5xl font-bold mb-2">Cửa Hàng Cafe</h1>
+          <p className="text-lg text-orange-600">Kim Giang - Hà Nội</p>
         </div>
       </div>
 
@@ -83,7 +83,7 @@ const ShopPage = () => {
                 </div>
                 <div className="flex-1">
                   <p className="text-sm text-gray-500 font-medium mb-1">Địa chỉ</p>
-                  <p className="text-gray-800 font-medium">12 Bạch Đằng, Hải Châu, Đà Nẵng</p>
+                  <p className="text-gray-800 font-medium">Tầng 2, Cantin Đại học Thăng Long, Đường Nghiêm Xuân Yêm, Phường Định Công, Thành phố Hà Nội</p>
                 </div>
               </div>
 
@@ -106,7 +106,7 @@ const ShopPage = () => {
                 <div className="flex-1">
                   <p className="text-sm text-gray-500 font-medium mb-1">Hotline</p>
                   <a href="tel:0236123456" className="text-blue-600 font-medium hover:text-blue-700">
-                    (0236) 123 456
+                    (0867) 689 783
                   </a>
                 </div>
               </div>
@@ -117,7 +117,7 @@ const ShopPage = () => {
               <h3 className="text-lg font-bold text-gray-800 mb-4 px-2">Bản đồ</h3>
               <div className="rounded-xl overflow-hidden shadow-inner">
                 <iframe
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3833.8993396748873!2d108.22010877584654!3d16.056244984617168!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x314219c24ddc234b%3A0x90bb7a52c5557d5d!2zMTIgQuG6oWNoIMSQ4bq1bmcsIFRow6FjaCBUaOG6r25nLCBI4bqjaSBDaMOidSwgxJDDoCBO4bq1bmcgNTUwMDAwLCBWaeG7h3QgTmFt!5e0!3m2!1svi!2s!4v1733406000000!5m2!1svi!2s"
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3725.417854382042!2d105.81301857596868!3d20.97588088959132!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3135acef8ad5350f%3A0x89435a3528118ff5!2zVHLGsOG7nW5nIMSQ4bqhaSBo4buNYyBUaMSDbmcgTG9uZw!5e0!3m2!1svi!2s!4v1780240964054!5m2!1svi!2s"
                   width="100%"
                   height="280"
                   style={{ border: 0 }}

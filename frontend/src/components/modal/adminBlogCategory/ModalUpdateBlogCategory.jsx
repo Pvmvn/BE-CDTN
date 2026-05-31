@@ -60,7 +60,7 @@ const ModalUpdateBlogCategory = ({
           <button
             className="bg-green-600 w-full rounded-md px-2 py-2 cursor-pointer"
             onClick={onConfirm}
-            disabled={!updateCategoryName}
+            disabled={!updateCategoryName.trim()}
           >
             Cập nhật
           </button>

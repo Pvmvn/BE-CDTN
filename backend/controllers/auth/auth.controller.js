@@ -213,6 +213,12 @@ export const changePassword = async (req, res) => {
     const userId = req.user.id; // lấy từ token
     const { oldPassword, newPassword } = req.body;
 
+    if (!newPassword || newPassword.trim().length < 8) {
+      return res
+        .status(400)
+        .json({ message: "Mật khẩu phải dài ít nhất 8 ký tự" });
+    }
+
     const user = await User.findById(userId);
     if (!user)
       return res.status(404).json({ message: "Không tìm thấy người dùng" });
@@ -221,6 +227,12 @@ export const changePassword = async (req, res) => {
     const isMatch = await bcrypt.compare(oldPassword, user.password);
     if (!isMatch)
       return res.status(400).json({ message: "Mật khẩu cũ không đúng" });
+
+    if (oldPassword === newPassword) {
+      return res.status(400).json({
+        message: "Mật khẩu mới không được trùng với mật khẩu cũ",
+      });
+    }
 
     // Hash mật khẩu mới và lưu lại
     const hashedPassword = await bcrypt.hash(newPassword, 10);

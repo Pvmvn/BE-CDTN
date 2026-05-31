@@ -5,12 +5,21 @@ import { formatDatetimeVN } from "../../utils/formatDatetimeVN";
 import ModalConfirmDelete from "../../components/modal/ModalConfirmDelete";
 import contactApi from "../../api/contactApi";
 import { FcReading } from "react-icons/fc";
+
+const normalizeSearchText = (value = "") =>
+  value
+    .toString()
+    .replace(/\s+/g, " ")
+    .toLowerCase()
+    .trim();
+
 export default function Contacts() {
   const [searchTerm, setSearchTerm] = useState("");
   const [contacts, setContacts] = useState([]);
   const [isOpenConfirmDelete, setIsOpenConfirmDelete] = useState(false);
   const [contactId, setContactId] = useState(null);
   const [getContactByRouter, setGetContactByRouter] = useState('contacts');
+  const normalizedSearchTerm = normalizeSearchText(searchTerm);
   useEffect(() => {
     document.title = "Quản lý lời nhắn";
   }, []);   
@@ -150,7 +159,7 @@ export default function Contacts() {
           <tbody className="bg-white divide-y divide-gray-200">
             {contacts
               .filter((contact) =>
-                contact.email.toLowerCase().includes(searchTerm.toLowerCase())
+                normalizeSearchText(contact.email).includes(normalizedSearchTerm)
               )
               .map((contact, index) => (
                 <tr key={contact._id} className="hover:bg-gray-50">

@@ -5,6 +5,17 @@ import ModalConfirmDelete from "../../components/modal/ModalConfirmDelete";
 import recipeApi from "../../api/recipeApi";
 import ModalCreateRecipe from "../../components/modal/adminRecipe/ModalCreateRecipe";
 import ModalUpdateRecipe from "../../components/modal/adminRecipe/ModalUpdateRecipe";
+
+const normalizeSearchText = (value = "") =>
+  value
+    .toString()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[đĐ]/g, (char) => (char === "đ" ? "d" : "D"))
+    .replace(/\s+/g, " ")
+    .toLowerCase()
+    .trim();
+
 export default function Recipes() {
   const [searchTerm, setSearchTerm] = useState("");
   const [recipes, setRecipes] = useState([]);
@@ -13,6 +24,7 @@ export default function Recipes() {
   const [isOpenModalCreateRecipe, setIsOpenModalCreateRecipe] = useState(false);
   const [isOpenModalUpdateRecipe, setIsOpenModalUpdateRecipe] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
+  const normalizedSearchTerm = normalizeSearchText(searchTerm);
   useEffect(() => {
     document.title = "Quản lý công thức";
   }, []); 
@@ -95,9 +107,9 @@ export default function Recipes() {
           <tbody className="bg-white divide-y">
             {recipes
               .filter((r) =>
-                r.productId.name
-                  .toLowerCase()
-                  .includes(searchTerm.toLowerCase())
+                normalizeSearchText(r.productId.name).includes(
+                  normalizedSearchTerm
+                )
               )
               .map((recipe, index) => (
                 <tr key={recipe._id} className="hover:bg-gray-50">

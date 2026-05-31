@@ -23,8 +23,13 @@ const ModalCreateBlog = ({
   const [title, setTitle] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const { selectedFile, handleImageChange, setSelectedFile } =
-    usePreviewImage(3);
+  const {
+    selectedFile,
+    selectedFileNames,
+    handleImageChange,
+    setSelectedFile,
+    setSelectedFileNames,
+  } = usePreviewImage(3);
   const { handleImageUpload } = useUpAndGetLinkImage();
   const [introHighlight, setIntroHighlight] = useState("");
   const [bodyHighlight, setBodyHighlight] = useState("");
@@ -37,7 +42,11 @@ const ModalCreateBlog = ({
 
   const handleRemoveImage = (indexImage) => {
     const newSelectedFile = selectedFile.filter((_, i) => i !== indexImage);
+    const newSelectedFileNames = selectedFileNames.filter(
+      (_, i) => i !== indexImage
+    );
     setSelectedFile(newSelectedFile);
+    setSelectedFileNames(newSelectedFileNames);
   };
 
   // Lấy tất cả danh mục của blog
@@ -180,11 +189,20 @@ const ModalCreateBlog = ({
         <div className="mb-4 p-4">
           <label className="font-medium">Ảnh bài viết</label>
           <p className="text-xs">Tối đa 3 ảnh, 1 ảnh chính và 2 ảnh phụ</p>
-          <input
-            type="file"
-            onChange={handleImageChange}
-            className="mt-1 border-1 px-2 cursor-pointer rounded-xs"
-          />
+          <label className="mt-1 inline-flex cursor-pointer items-center gap-3 rounded-xs border px-3 py-2">
+            <span className="rounded bg-gray-100 px-3 py-1">Chọn tệp</span>
+            <span className="text-sm text-gray-600">
+              {selectedFileNames.length > 0
+                ? selectedFileNames.join(", ")
+                : "Chưa có tệp nào được chọn"}
+            </span>
+            <input
+              type="file"
+              onChange={handleImageChange}
+              className="hidden"
+              accept="image/*"
+            />
+          </label>
           <div
             className={`flex gap-2 mt-2 bg-gray-300 px-2 max-w-xs py-2 ${
               selectedFile.length > 0 ? "flex" : "hidden"

@@ -120,12 +120,20 @@ const MenuPage = () => {
 
     if (!message || isChatLoading) return;
 
+    const conversationHistory = chatMessages
+      .filter((item) => item.role === "user" || item.role === "assistant")
+      .slice(-6)
+      .map((item) => ({
+        role: item.role,
+        content: item.content,
+      }));
+
     setChatInput("");
     setChatMessages((prev) => [...prev, { role: "user", content: message }]);
 
     try {
       setIsChatLoading(true);
-      const data = await aiApi.chat(message);
+      const data = await aiApi.chat(message, conversationHistory);
       setChatMessages((prev) => [
         ...prev,
         {
@@ -385,6 +393,16 @@ const MenuPage = () => {
                 </div>
               </div>
             ))}
+          {categorySlug && products.length === 0 && (
+            <div className="w-full max-w-2xl rounded-2xl border border-amber-200 bg-white/80 px-6 py-10 text-center shadow-lg">
+              <p className="text-xl font-bold text-orange-600">
+                Hiện tại danh mục này chưa có sản phẩm
+              </p>
+              <p className="mt-2 text-gray-600">
+                Bạn vui lòng xem món khác nhé!
+              </p>
+            </div>
+          )}
         </div>
       </div>
       {isOpenModalDetailProduct && (

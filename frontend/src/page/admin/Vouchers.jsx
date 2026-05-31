@@ -10,6 +10,14 @@ import ModalConfirmDeativateVoucher from "../../components/modal/adminVoucher/Mo
 import ModalConfirmDelete from "../../components/modal/ModalConfirmDelete";
 import { MdDelete } from "react-icons/md";
 import ModalUpdateVoucher from "../../components/modal/adminVoucher/ModalUpdateVoucher";
+
+const normalizeSearchText = (value = "") =>
+  value
+    .toString()
+    .replace(/\s+/g, " ")
+    .toLowerCase()
+    .trim();
+
 export default function Vouchers() {
   const [searchTerm, setSearchTerm] = useState("");
   const [vouchers, setVouchers] = useState([]);
@@ -26,6 +34,7 @@ export default function Vouchers() {
   const [voucherSelected, setVoucherSelected] = useState(null);
   const [isOpenModalConfirmDelete, setIsOpenModalConfirmDelete] =
     useState(false);
+  const normalizedSearchTerm = normalizeSearchText(searchTerm);
   // Lấy danh sách sản phẩm
   useEffect(() => {
     const getAllVouchers = async () => {
@@ -135,7 +144,7 @@ export default function Vouchers() {
           <tbody className="bg-white divide-y">
             {vouchers
               .filter((v) =>
-                v.code.toLowerCase().includes(searchTerm.toLowerCase())
+                normalizeSearchText(v.code).includes(normalizedSearchTerm)
               )
               .map((voucher, index) => (
                 <tr key={voucher._id} className="hover:bg-gray-50">
