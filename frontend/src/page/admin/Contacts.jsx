@@ -6,10 +6,10 @@ import ModalConfirmDelete from "../../components/modal/ModalConfirmDelete";
 import contactApi from "../../api/contactApi";
 import { FcReading } from "react-icons/fc";
 
-const normalizeSearchText = (value = "") =>
+const normalizeEmailSearchText = (value = "") =>
   value
     .toString()
-    .replace(/\s+/g, " ")
+    .replace(/\s+/g, "")
     .toLowerCase()
     .trim();
 
@@ -19,7 +19,14 @@ export default function Contacts() {
   const [isOpenConfirmDelete, setIsOpenConfirmDelete] = useState(false);
   const [contactId, setContactId] = useState(null);
   const [getContactByRouter, setGetContactByRouter] = useState('contacts');
-  const normalizedSearchTerm = normalizeSearchText(searchTerm);
+  const normalizedSearchTerm = normalizeEmailSearchText(searchTerm);
+  const isWhitespaceOnlySearch =
+    searchTerm.length > 0 && normalizedSearchTerm.length === 0;
+  const filteredContacts = isWhitespaceOnlySearch
+    ? []
+    : contacts.filter((contact) =>
+        normalizeEmailSearchText(contact.email).includes(normalizedSearchTerm)
+      );
   useEffect(() => {
     document.title = "Quản lý lời nhắn";
   }, []);   
@@ -157,10 +164,7 @@ export default function Contacts() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {contacts
-              .filter((contact) =>
-                normalizeSearchText(contact.email).includes(normalizedSearchTerm)
-              )
+            {filteredContacts
               .map((contact, index) => (
                 <tr key={contact._id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 text-sm font-medium text-gray-900">
