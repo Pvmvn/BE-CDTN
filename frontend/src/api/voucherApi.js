@@ -21,6 +21,10 @@ const voucherApi = {
     const res = await axiosClient.get('/vouchers/availableVouchers');
     return res.data;
   },
+  toggleVoucherStatus: async(id) => {
+    const res = await axiosClient.patch(`/vouchers/toggle-status/${id}`);
+    return res.data;
+  },
   deactivateVoucher: async(id) => {
     const res = await axiosClient.patch(`/vouchers/deactivateVoucher/${id}`);
     return res.data

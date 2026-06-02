@@ -1,5 +1,5 @@
 import express from 'express';
-import { applyVoucher, createVoucher, deactivateVoucher, deleteVoucher, getAvailableVouchers, getVouchers, updateVoucher } from '../controllers/voucher/voucher.controller.js';
+import { applyVoucher, createVoucher, deactivateVoucher, deleteVoucher, getAvailableVouchers, getVouchers, toggleVoucherStatus, updateVoucher } from '../controllers/voucher/voucher.controller.js';
 import { verifyToken, isAdmin } from '../middleware/auth.middleware.js';
 const router = express.Router();
 
@@ -8,6 +8,7 @@ router.get('/', getVouchers);
 router.put('/:id', verifyToken, isAdmin, updateVoucher);
 router.post('/check-voucher', verifyToken, applyVoucher);
 router.get('/availableVouchers', getAvailableVouchers);
+router.patch('/toggle-status/:id', verifyToken, isAdmin, toggleVoucherStatus);
 router.patch('/deactivateVoucher/:id', verifyToken, isAdmin, deactivateVoucher);
 router.delete('/deleteVoucher/:id', verifyToken, isAdmin, deleteVoucher);
 export default router;

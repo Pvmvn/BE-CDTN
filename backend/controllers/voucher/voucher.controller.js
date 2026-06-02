@@ -1,6 +1,13 @@
 import Voucher from "../../model/voucher.model.js";
 import Order from "../../model/order.model.js";
 
+const getComputedVoucherStatus = (voucher, now = new Date()) => {
+  if (voucher.status === "inactive") return "inactive";
+  if (now < voucher.startDate) return "upcoming";
+  if (now > voucher.endDate) return "expired";
+  return "active";
+};
+
 // Tạo voucher
 export const createVoucher = async (req, res) => {
   try {
@@ -311,15 +318,10 @@ export const getVouchers = async (req, res) => {
       select: "name",
     });
     const now = new Date();
-    const result = vouchers.map((v) => {
-      let status = v.status;
-      if (v.status === "inactive") status = "inactive";
-      else if (now < v.startDate) status = "upcoming";
-      else if (now > v.endDate) status = "expired";
-      else status = "active";
-
-      return { ...v.toObject(), status };
-    });
+    const result = vouchers.map((v) => ({
+      ...v.toObject(),
+      status: getComputedVoucherStatus(v, now),
+    }));
 
     res.json(result);
   } catch (error) {
@@ -394,6 +396,31 @@ export const getAvailableVouchers = async (req, res) => {
       });
 
     return res.json(vouchers);
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+export const toggleVoucherStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const voucher = await Voucher.findById(id);
+    if (!voucher) {
+      return res.status(404).json({ message: "Voucher khÃ´ng tá»“n táº¡i" });
+    }
+
+    voucher.status = voucher.status === "inactive" ? "active" : "inactive";
+    await voucher.save();
+
+    const populatedVoucher = await Voucher.findById(voucher._id).populate(
+      "conditions.applicableCategories",
+      "name"
+    );
+
+    return res.json({
+      ...populatedVoucher.toObject(),
+      status: getComputedVoucherStatus(populatedVoucher),
+    });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
