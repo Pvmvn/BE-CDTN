@@ -6,6 +6,7 @@ import productApi from "../../api/productApi";
 import ModalCreateProduct from "../../components/modal/adminProduct/ModalCreateProduct";
 import ModalConfirmDelete from "../../components/modal/ModalConfirmDelete";
 import ModalUpdateProduct from "../../components/modal/adminProduct/ModalUpdateProduct";
+import { filterBySearchTerm } from "../../utils/adminSearch";
 
 const normalizeSearchText = (value = "") =>
   value
@@ -78,9 +79,10 @@ export default function Products() {
     }
   };
 
-  const normalizedSearchTerm = normalizeSearchText(searchTerm);
-  const filteredProducts = products.filter((product) =>
-    normalizeSearchText(product.name).includes(normalizedSearchTerm)
+  const { filteredItems: filteredProducts } = filterBySearchTerm(
+    products,
+    searchTerm,
+    (product) => product.name
   );
 
   return (

@@ -8,13 +8,7 @@ import { formatDatetimeVN } from "../../utils/formatDatetimeVN";
 import ModalCreateVoucher from "../../components/modal/adminVoucher/ModalCreateVoucher";
 import ModalConfirmDelete from "../../components/modal/ModalConfirmDelete";
 import ModalUpdateVoucher from "../../components/modal/adminVoucher/ModalUpdateVoucher";
-
-const normalizeSearchText = (value = "") =>
-  value
-    .toString()
-    .replace(/\s+/g, " ")
-    .toLowerCase()
-    .trim();
+import { filterBySearchTerm } from "../../utils/adminSearch";
 
 const getVoucherStatusConfig = (status) => {
   switch (status) {
@@ -55,7 +49,11 @@ export default function Vouchers() {
   const [voucherSelected, setVoucherSelected] = useState(null);
   const [isOpenModalConfirmDelete, setIsOpenModalConfirmDelete] =
     useState(false);
-  const normalizedSearchTerm = normalizeSearchText(searchTerm);
+  const { filteredItems: filteredVouchers } = filterBySearchTerm(
+    vouchers,
+    searchTerm,
+    (voucher) => voucher.code
+  );
 
   useEffect(() => {
     const getAllVouchers = async () => {
@@ -160,11 +158,7 @@ export default function Vouchers() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y">
-            {vouchers
-              .filter((voucher) =>
-                normalizeSearchText(voucher.code).includes(normalizedSearchTerm)
-              )
-              .map((voucher, index) => {
+            {filteredVouchers.map((voucher, index) => {
                 const statusConfig = getVoucherStatusConfig(voucher.status);
 
                 return (

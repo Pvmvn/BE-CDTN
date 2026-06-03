@@ -5,13 +5,10 @@ import { formatDatetimeVN } from "../../utils/formatDatetimeVN";
 import ModalConfirmDelete from "../../components/modal/ModalConfirmDelete";
 import contactApi from "../../api/contactApi";
 import { FcReading } from "react-icons/fc";
-
-const normalizeEmailSearchText = (value = "") =>
-  value
-    .toString()
-    .replace(/\s+/g, "")
-    .toLowerCase()
-    .trim();
+import {
+  filterBySearchTerm,
+  normalizeEmailSearchText,
+} from "../../utils/adminSearch";
 
 export default function Contacts() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -19,14 +16,12 @@ export default function Contacts() {
   const [isOpenConfirmDelete, setIsOpenConfirmDelete] = useState(false);
   const [contactId, setContactId] = useState(null);
   const [getContactByRouter, setGetContactByRouter] = useState('contacts');
-  const normalizedSearchTerm = normalizeEmailSearchText(searchTerm);
-  const isWhitespaceOnlySearch =
-    searchTerm.length > 0 && normalizedSearchTerm.length === 0;
-  const filteredContacts = isWhitespaceOnlySearch
-    ? []
-    : contacts.filter((contact) =>
-        normalizeEmailSearchText(contact.email).includes(normalizedSearchTerm)
-      );
+  const { filteredItems: filteredContacts } = filterBySearchTerm(
+    contacts,
+    searchTerm,
+    (contact) => contact.email,
+    normalizeEmailSearchText
+  );
   useEffect(() => {
     document.title = "Quản lý lời nhắn";
   }, []);   

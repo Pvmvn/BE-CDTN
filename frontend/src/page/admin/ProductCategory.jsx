@@ -8,6 +8,7 @@ import ModalConfirmDelete from "../../components/modal/ModalConfirmDelete";
 import usePreviewImage from "../../hooks/usePreviewImage";
 import useUpAndGetLinkImage from "../../hooks/useUpAndGetLinkImage";
 import ModalUpdateProductCategory from "../../components/modal/adminProductCategory/ModalUpdateProductCategory";
+import { filterBySearchTerm } from "../../utils/adminSearch";
 
 const normalizeSearchText = (value = "") =>
   value
@@ -35,7 +36,11 @@ export default function ProductCategory() {
     usePreviewImage(1);
   const { handleImageUpload } = useUpAndGetLinkImage();
   const [isLoading, setIsLoading] = useState(false);
-  const normalizedSearchTerm = normalizeSearchText(searchTerm);
+  const { filteredItems: filteredCategories } = filterBySearchTerm(
+    categories,
+    searchTerm,
+    (category) => category.name
+  );
   useEffect(() => {
     document.title = "Quản lý loại sản phẩm";
   }, []);
@@ -201,11 +206,7 @@ export default function ProductCategory() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y">
-            {categories
-              .filter((c) =>
-                normalizeSearchText(c.name).includes(normalizedSearchTerm)
-              )
-              .map((category, index) => (
+            {filteredCategories.map((category, index) => (
                 <tr key={category._id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 text-sm">{index + 1}</td>
                   <td className="px-6 py-4 text-sm">{category.name}</td>

@@ -50,7 +50,6 @@ const lowStockStages = [
     },
   },
   { $sort: { quantity: 1 } },
-  { $limit: 8 },
 ];
 
 export const getDashboardSummary = async (req, res) => {
@@ -74,6 +73,7 @@ export const getDashboardSummary = async (req, res) => {
       reservationStatusRows,
       unreadContacts,
       activeVouchers,
+      lowStockIngredientCountRows,
       lowStockIngredients,
       recentOrders,
       topProducts,
@@ -113,6 +113,10 @@ export const getDashboardSummary = async (req, res) => {
       ]),
       Contact.countDocuments({ status: "new" }),
       Voucher.countDocuments({ status: "active" }),
+      Ingredient.aggregate([
+        ...lowStockStages,
+        { $count: "total" },
+      ]),
       Ingredient.aggregate(lowStockStages),
       Order.find(dateMatch)
         .select("totalPrice orderType paymentMethod paymentStatus status createdAt")
@@ -150,7 +154,7 @@ export const getDashboardSummary = async (req, res) => {
             },
           },
         },
-        { $sort: { quantity: -1 } },
+        { $sort: { revenue: -1, quantity: -1 } },
         { $limit: 8 },
       ]),
       Order.aggregate([
@@ -258,6 +262,7 @@ export const getDashboardSummary = async (req, res) => {
     const inventoryValueSummary = inventoryValueRows[0] || {
       inventoryValue: 0,
     };
+    const lowStockIngredientCount = lowStockIngredientCountRows[0]?.total || 0;
     const grossProfit = revenueSummary.revenue - cogsSummary.cogs;
     const grossMargin =
       revenueSummary.revenue > 0
@@ -282,7 +287,7 @@ export const getDashboardSummary = async (req, res) => {
         reservations: totalReservations,
         unreadContacts,
         activeVouchers,
-        lowStockIngredients: lowStockIngredients.length,
+        lowStockIngredients: lowStockIngredientCount,
         cogs: Math.round(cogsSummary.cogs),
         grossProfit: Math.round(grossProfit),
         grossMargin: Math.round(grossMargin * 10) / 10,

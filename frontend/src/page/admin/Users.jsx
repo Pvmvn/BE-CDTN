@@ -5,13 +5,10 @@ import userApi from "../../api/userApi";
 import ModalConfirmDelete from "../../components/modal/ModalConfirmDelete";
 import ModalUpdateRoleUser from "../../components/modal/adminUser/ModalUpdateRoleUser";
 import ModalUpdateUser from "../../components/modal/adminUser/ModalUpdateUser";
-
-const normalizeSearchText = (value = "") =>
-  value
-    .toString()
-    .replace(/\s+/g, " ")
-    .toLowerCase()
-    .trim();
+import {
+  filterBySearchTerm,
+  normalizeEmailSearchText,
+} from "../../utils/adminSearch";
 
 export default function Users() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -22,7 +19,12 @@ export default function Users() {
   const [isOpenModalUpdateUser, setIsOpenModalUpdateUser] = useState(false);
   const [isOpenConfirmDelete, setIsOpenConfirmDelete] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
-  const normalizedSearchTerm = normalizeSearchText(searchTerm);
+  const { filteredItems: filteredUsers } = filterBySearchTerm(
+    users,
+    searchTerm,
+    (user) => user?.email,
+    normalizeEmailSearchText
+  );
 
   useEffect(() => {
     document.title = "Quản lý người dùng";
@@ -173,13 +175,7 @@ export default function Users() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y">
-            {users
-              .filter((user) =>
-                normalizeSearchText(user?.email || "").includes(
-                  normalizedSearchTerm
-                )
-              )
-              .map((user, index) => (
+            {filteredUsers.map((user, index) => (
                 <tr key={user._id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 text-sm">{index + 1}</td>
                   <td className="px-6 py-4 text-sm truncate max-w-[200px]">

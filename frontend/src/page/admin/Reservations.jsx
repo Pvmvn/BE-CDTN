@@ -6,6 +6,7 @@ import ModalConfirmDelete from "../../components/modal/ModalConfirmDelete";
 import ModalConfirm from "../../components/modal/adminReservation/ModalConfirm";
 import { io } from "socket.io-client";
 import playTingSound from "../../utils/playTingSound";
+import { normalizeSearchText as normalizeAdminSearchText } from "../../utils/adminSearch";
 
 const normalizeSearchText = (value = "") =>
   value
@@ -26,7 +27,16 @@ export default function Reservations() {
   const [isOpenDelete, setIsOpenDelete] = useState(false);
   const [newReservationCount, setNewReservationCount] = useState(0);
   const [loading, setLoading] = useState(false);
-  const normalizedSearchTerm = normalizeSearchText(searchTerm);
+  const normalizedSearchTerm = normalizeAdminSearchText(searchTerm);
+  const isWhitespaceOnlySearch =
+    searchTerm.length > 0 && normalizedSearchTerm.length === 0;
+  const filteredReservations = isWhitespaceOnlySearch
+    ? []
+    : reservations.filter(
+        (reservation) =>
+          normalizeAdminSearchText(reservation.name).includes(normalizedSearchTerm) ||
+          normalizeAdminSearchText(reservation.phone).includes(normalizedSearchTerm)
+      );
 
   const getTodayString = () => new Date().toISOString().split("T")[0];
   const [startDate, setStartDate] = useState(getTodayString());
@@ -296,13 +306,7 @@ export default function Reservations() {
           </thead>
 
           <tbody className="divide-y">
-            {reservations
-              .filter(
-                (r) =>
-                  normalizeSearchText(r.name).includes(normalizedSearchTerm) ||
-                  normalizeSearchText(r.phone).includes(normalizedSearchTerm)
-              )
-              .map((r, index) => (
+            {filteredReservations.map((r, index) => (
                 <tr key={r._id} className="hover:bg-gray-50">
                   <td className="px-6 py-4">{index + 1}</td>
                   <td className="px-6 py-4">{r.name}</td>

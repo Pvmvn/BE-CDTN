@@ -6,6 +6,7 @@ import { formatDatetimeVN } from "../../utils/formatDatetimeVN";
 import ModalCreateBlogCategory from "../../components/modal/adminBlogCategory/ModalCreateBlogCategory";
 import ModalUpdateBlogCategory from "../../components/modal/adminBlogCategory/ModalUpdateBlogCategory";
 import ModalConfirmDelete from "../../components/modal/ModalConfirmDelete";
+import { filterBySearchTerm } from "../../utils/adminSearch";
 
 const normalizeSearchText = (value = "") =>
   value
@@ -28,7 +29,11 @@ export default function BlogCategory() {
   const [currentCategoryId, setCurrentCategoryId] = useState(null);
   const [updateCategoryName, setUpdateCategoryName] = useState("");
   const [createNameCategory, setCreateNameCategory] = useState("");
-  const normalizedSearchTerm = normalizeSearchText(searchTerm);
+  const { filteredItems: filteredCategories } = filterBySearchTerm(
+    categories,
+    searchTerm,
+    (category) => category.name
+  );
   useEffect(() => {
     document.title = "Quản lý loại bài viết";
   }, []);
@@ -160,11 +165,7 @@ export default function BlogCategory() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {categories
-              .filter((category) =>
-                normalizeSearchText(category.name).includes(normalizedSearchTerm)
-              )
-              .map((category, index) => (
+            {filteredCategories.map((category, index) => (
                 <tr key={category._id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 text-sm font-medium text-gray-900">
                     {index + 1}

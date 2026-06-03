@@ -5,6 +5,7 @@ import ModalConfirmDelete from "../../components/modal/ModalConfirmDelete";
 import recipeApi from "../../api/recipeApi";
 import ModalCreateRecipe from "../../components/modal/adminRecipe/ModalCreateRecipe";
 import ModalUpdateRecipe from "../../components/modal/adminRecipe/ModalUpdateRecipe";
+import { filterBySearchTerm } from "../../utils/adminSearch";
 
 const normalizeSearchText = (value = "") =>
   value
@@ -24,7 +25,11 @@ export default function Recipes() {
   const [isOpenModalCreateRecipe, setIsOpenModalCreateRecipe] = useState(false);
   const [isOpenModalUpdateRecipe, setIsOpenModalUpdateRecipe] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
-  const normalizedSearchTerm = normalizeSearchText(searchTerm);
+  const { filteredItems: filteredRecipes } = filterBySearchTerm(
+    recipes,
+    searchTerm,
+    (recipe) => recipe.productId?.name
+  );
   useEffect(() => {
     document.title = "Quản lý công thức";
   }, []); 
@@ -105,13 +110,7 @@ export default function Recipes() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y">
-            {recipes
-              .filter((r) =>
-                normalizeSearchText(r.productId.name).includes(
-                  normalizedSearchTerm
-                )
-              )
-              .map((recipe, index) => (
+            {filteredRecipes.map((recipe, index) => (
                 <tr key={recipe._id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 text-sm">{index + 1}</td>
                   <td className="px-6 py-4 text-sm truncate max-w-[200px] whitespace-normal">

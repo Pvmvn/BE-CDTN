@@ -7,6 +7,7 @@ import ModalConfirmDelete from "../../components/modal/ModalConfirmDelete";
 import ModalCreateIngredient from "../../components/modal/adminIngredient/ModalCreateIngredient";
 import ModalUpdateIngredient from "../../components/modal/adminIngredient/ModalUpdateIngredient";
 import { IoIosWarning } from "react-icons/io";
+import { filterBySearchTerm } from "../../utils/adminSearch";
 
 const normalizeSearchText = (value = "") =>
   value
@@ -25,7 +26,11 @@ export default function Ingredients() {
   const [isOpenModalCreateIngredient, setIsOpenModalCreateIngredient] = useState(false);
   const [isOpenModalUpdateIngredient, setIsOpenModalUpdateIngredient] = useState(false);
   const [selectedIngredient, setSelectedIngredient] = useState(null);
-  const normalizedSearchTerm = normalizeSearchText(searchTerm);
+  const { filteredItems: filteredIngredients, hasNoResults } = filterBySearchTerm(
+    ingredients,
+    searchTerm,
+    (ingredient) => ingredient.name
+  );
 
   useEffect(() => {
     document.title = "Quản lý kho";
@@ -153,11 +158,7 @@ export default function Ingredients() {
           </thead>
 
           <tbody className="bg-white divide-y">
-            {ingredients
-              .filter((p) =>
-                normalizeSearchText(p.name || "").includes(normalizedSearchTerm)
-              )
-              .map((ingredient, index) => (
+            {filteredIngredients.map((ingredient, index) => (
                 <tr key={ingredient._id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 text-sm">{index + 1}</td>
 
@@ -222,6 +223,16 @@ export default function Ingredients() {
                   </td>
                 </tr>
               ))}
+            {hasNoResults && (
+              <tr>
+                <td
+                  colSpan={7}
+                  className="px-6 py-8 text-center text-sm text-gray-500"
+                >
+                  Khong co ket qua kha dung.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

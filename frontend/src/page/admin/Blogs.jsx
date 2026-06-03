@@ -8,6 +8,7 @@ import ModalPreviewBlog from "../../components/modal/blog/ModalPreviewBlog";
 import ModalCreateBlog from "../../components/modal/blog/ModalCreateBlog";
 import ModalConfirmDelete from "../../components/modal/ModalConfirmDelete";
 import ModalUpdateBlog from "../../components/modal/blog/ModalUpdateBlog";
+import { filterBySearchTerm } from "../../utils/adminSearch";
 
 const normalizeSearchText = (value = "") =>
   value
@@ -28,7 +29,11 @@ export default function BlogCategory() {
   const [isOpenModalUpdateBlog, setIsOpenModalUpdateBlog] = useState(false);
   const [blogToUpdate, setBlogToUpdate] = useState(null);
   const [isOpenConfirmDelete, setIsOpenConfirmDelete] = useState(false);
-  const normalizedSearchTerm = normalizeSearchText(searchTerm);
+  const { filteredItems: filteredBlogs } = filterBySearchTerm(
+    allBlogs,
+    searchTerm,
+    (blog) => blog.title
+  );
   useEffect(() => {
     document.title = "Quản lý bài viết";
   }, []);
@@ -115,11 +120,7 @@ export default function BlogCategory() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {allBlogs
-              .filter((blog) =>
-                normalizeSearchText(blog.title).includes(normalizedSearchTerm)
-              )
-              .map((blog, index) => (
+            {filteredBlogs.map((blog, index) => (
                 <tr key={blog._id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 text-sm font-medium text-gray-900">
                     {index + 1}
