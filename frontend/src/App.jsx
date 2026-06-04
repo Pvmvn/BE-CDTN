@@ -23,7 +23,7 @@ import HomePage from "./page/home/HomePage";
 import LoginPage from "./page/auth/LoginPage";
 import RegisterPage from "./page/auth/RegisterPage";
 import VerifyEmailPage from "./page/auth/VerifyEmailPage";
-import ForgotPassword from "./page/auth/forgotPassword";
+import ForgotPassword from "./page/auth/ForgotPassword";
 import ResetPassword from "./page/auth/ResetPassword";
 import ProfilePage from "./page/profile/ProfilePage";
 import ChangePassword from "./page/profile/ChangePassword";
