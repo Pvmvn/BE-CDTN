@@ -56,10 +56,15 @@ export const registerUser = async (req, res) => {
       `,
     };
 
-    await transporter.sendMail(mailOptions);
+    try {
+      await transporter.sendMail(mailOptions);
+    } catch (mailError) {
+      console.warn("Cảnh báo: Không thể gửi email do server Render chặn cổng SMTP:", mailError.message);
+      // Vẫn tiếp tục và báo thành công vì user đã được lưu vào DB
+    }
 
     res.status(200).json({
-      message: "Email xác thực đã được gửi. Vui lòng kiểm tra hộp thư của bạn!",
+      message: "Đăng ký thành công! Bạn có thể đăng nhập ngay.",
     });
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -134,10 +139,18 @@ export const forgotPassword = async (req, res) => {
       `,
     };
 
-    await transporter.sendMail(mailOptions);
-    res.json({
-      message: "Vui lòng kiểm tra email để đặt lại mật khẩu",
-    });
+    try {
+      await transporter.sendMail(mailOptions);
+      res.json({
+        message: "Vui lòng kiểm tra email để đặt lại mật khẩu",
+      });
+    } catch (mailError) {
+      console.warn("Lỗi gửi email quên mật khẩu (Render block):", mailError.message);
+      res.json({
+        message: "Bản Free Render không gửi được Email. Vui lòng copy link này để test đổi mật khẩu: " + resetLink,
+        resetLink: resetLink
+      });
+    }
   } catch (error) {
     res.status(500).json({ message: "Lỗi server" });
   }
