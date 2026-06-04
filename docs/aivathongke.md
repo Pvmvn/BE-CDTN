@@ -3,10 +3,10 @@
 | UC | AI gợi ý món |
 |---|---|
 | Tác nhân | Khách hàng đã đăng nhập |
-| Mô tả | Khách hàng mở trang menu, hệ thống tự động lấy danh sách gợi ý món cá nhân hóa dựa trên lịch sử đặt hàng và menu đang bán. Khách hàng cũng có thể mở trợ lý AI để đặt câu hỏi về khẩu vị, mức giá, món đang giảm giá hoặc món phù hợp theo nhu cầu. |
-| Tiền điều kiện | Người dùng đã đăng nhập; token hợp lệ; hệ thống có sản phẩm đang bán. |
+| Mô tả | Khách hàng mở trang menu, hệ thống tự động lấy danh sách gợi ý món cá nhân hóa dựa trên lịch sử đặt hàng và menu đang bán. Khách hàng cũng có thể mở trợ lý AI để đặt câu hỏi về khẩu vị, mức giá, món đang giảm giá hoặc món phù hợp theo nhu cầu. Trợ lý AI không mang toàn bộ menu trong system prompt mà sử dụng tool để lấy dữ liệu món khi cần. |
+| Tiền điều kiện | Người dùng đã đăng nhập; token hợp lệ; hệ thống có sản phẩm đang bán; dịch vụ AI và tool truy vấn món khả dụng. |
 | Hậu điều kiện thành công | Hệ thống trả về danh sách gợi ý món hoặc câu trả lời AI; khách hàng có thể mở chi tiết món được đề xuất. |
-| Hậu điều kiện lỗi | Nếu token không hợp lệ hoặc AI lỗi, frontend hiển thị thông báo tương ứng; nếu Gemini hết quota, backend dùng cơ chế fallback từ dữ liệu menu và lịch sử đơn hàng. |
+| Hậu điều kiện lỗi | Nếu token không hợp lệ, tool lỗi hoặc AI lỗi, frontend hiển thị thông báo tương ứng; nếu AI provider không phản hồi, backend dùng cơ chế fallback từ dữ liệu menu và lịch sử đơn hàng. |
 
 ### Đặc tả chức năng
 
@@ -15,25 +15,27 @@
 | Luồng lấy gợi ý tự động | 1. Khách hàng đã đăng nhập mở trang Menu. |
 |  | 2. Frontend tải danh sách sản phẩm, danh mục, voucher đang khả dụng. |
 |  | 3. `useEffect` gọi `GET /ai/recommend-products` nếu có `user`. |
-|  | 4. Backend `verifyToken` xác thực người dùng. |
-|  | 5. Backend lấy tối đa 40 sản phẩm đang bán và tối đa 12 đơn hàng gần nhất chưa bị hủy của người dùng. |
-|  | 6. Backend tạo prompt gửi Gemini để sinh tối đa 5 món gợi ý kèm lý do và điểm số. |
-|  | 7. Nếu Gemini trả dữ liệu hợp lệ, backend ánh xạ `productId` sang sản phẩm thực tế và trả về `recommendations`. |
-|  | 8. Nếu Gemini bị lỗi quota `429`, backend tạo gợi ý fallback dựa trên lịch sử mua, danh mục thường dùng, giảm giá và độ mới của sản phẩm. |
-|  | 9. Frontend hiển thị khối “Gợi ý dành cho bạn”; khách hàng có thể bấm vào món để mở modal chi tiết. |
+|  | 4. Backend `verifyToken` xác thực người dùng và chuyển yêu cầu sang AI orchestration service. |
+|  | 5. AI orchestration service chuẩn bị system prompt ngắn chỉ chứa vai trò, quy tắc trả lời và định dạng kết quả; không nhúng toàn bộ menu vào prompt. |
+|  | 6. AI orchestration service gọi tool `get_products_for_recommendation` để lấy tối đa 40 sản phẩm đang bán và tối đa 12 đơn hàng gần nhất chưa bị hủy của người dùng. |
+|  | 7. Tool truy vấn dữ liệu từ service/API sản phẩm và đơn hàng, rồi trả context rút gọn cho AI. |
+|  | 8. AI sinh tối đa 5 món gợi ý kèm lý do và điểm số dựa trên dữ liệu vừa lấy; backend ánh xạ `productId` sang sản phẩm thực tế và trả về `recommendations`. |
+|  | 9. Nếu AI provider hoặc tool không phản hồi, backend tạo gợi ý fallback dựa trên lịch sử mua, danh mục thường dùng, giảm giá và độ mới của sản phẩm. |
+|  | 10. Frontend hiển thị khối “Gợi ý dành cho bạn”; khách hàng có thể bấm vào món để mở modal chi tiết. |
 | Luồng chat với trợ lý AI | 1. Khách hàng bấm `Mở trợ lý tư vấn AI`. |
 |  | 2. Frontend hiển thị khung chat với lời chào mặc định và các câu hỏi gợi ý. |
 |  | 3. Khách hàng nhập câu hỏi và gửi form. |
 |  | 4. Frontend gọi `POST /ai/chat` với `message`. |
-|  | 5. Backend kiểm tra `message` không rỗng, lấy tối đa 40 sản phẩm đang bán và 5 đơn hàng gần nhất của người dùng. |
-|  | 6. Backend dựng prompt yêu cầu AI chỉ tư vấn trong phạm vi menu THREESTAR, trả lời tiếng Việt, ngắn gọn tối đa 4 câu. |
-|  | 7. Backend gọi Gemini để sinh câu trả lời. |
-|  | 8. Nếu Gemini hết quota `429`, backend trả lời fallback bằng cách chọn tối đa 3 sản phẩm phù hợp theo từ khóa như `giảm`, `cà phê`, `matcha`. |
-|  | 9. Frontend thêm phản hồi của AI vào danh sách `chatMessages`. |
+|  | 5. Backend kiểm tra `message` không rỗng, xác thực token và chuyển yêu cầu sang AI orchestration service. |
+|  | 6. AI orchestration service phân tích ý định của người dùng; nếu câu hỏi liên quan đến món, giá, danh mục, ưu đãi hoặc món phù hợp, AI sẽ gọi tool `search_products` hoặc `get_products_for_chat`. |
+|  | 7. Tool truy vấn dữ liệu món đang bán, danh mục, giá, giảm giá và một phần lịch sử đơn hàng gần đây của người dùng rồi trả context rút gọn cho AI. |
+|  | 8. AI trả lời tiếng Việt, ngắn gọn, chỉ trong phạm vi menu THREESTAR, và dùng dữ liệu từ tool thay vì suy đoán từ prompt tĩnh. |
+|  | 9. Nếu AI provider hoặc tool không phản hồi, backend trả lời fallback bằng cách chọn tối đa 3 sản phẩm phù hợp theo từ khóa như `giảm`, `cà phê`, `matcha`. |
+|  | 10. Frontend thêm phản hồi của AI vào danh sách `chatMessages`. |
 | Luồng phụ | 1. Nếu người dùng chưa đăng nhập, frontend không hiển thị khối AI và không gọi API AI. |
 |  | 2. Nếu `message` rỗng, backend trả lỗi `Vui lòng nhập nội dung cần hỏi`. |
-|  | 3. Nếu chưa cấu hình `GEMINI_API_KEY`, backend trả lỗi `Chưa cấu hình GEMINI_API_KEY`. |
-|  | 4. Nếu AI không phản hồi được, frontend hiển thị thông điệp lỗi trong khung chat hoặc bỏ qua phần gợi ý tự động. |
+|  | 3. Nếu chưa cấu hình khóa API cho AI provider, backend trả lỗi cấu hình dịch vụ AI. |
+|  | 4. Nếu tool không lấy được dữ liệu món hoặc AI không phản hồi được, frontend hiển thị thông điệp lỗi trong khung chat hoặc bỏ qua phần gợi ý tự động. |
 
 
 
