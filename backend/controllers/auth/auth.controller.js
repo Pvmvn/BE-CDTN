@@ -61,14 +61,19 @@ export const registerUser = async (req, res) => {
 
     try {
       await transporter.sendMail(mailOptions);
+      res.status(200).json({
+        message: "Email xác thực đã được gửi. Vui lòng kiểm tra hộp thư của bạn!",
+      });
     } catch (mailError) {
       console.warn("Cảnh báo: Không thể gửi email do server Render chặn cổng SMTP:", mailError.message);
-      // Vẫn tiếp tục và báo thành công vì user đã được lưu vào DB
+      // Tự động tạo user luôn (bỏ qua bước xác thực email) để chống kẹt luồng
+      const hashedPassword = await bcrypt.hash(password, 10);
+      await User.create({ name, email, password: hashedPassword });
+      
+      res.status(200).json({
+        message: "Đăng ký thành công! (Tự động kích hoạt do server miễn phí). Bạn có thể đăng nhập ngay.",
+      });
     }
-
-    res.status(200).json({
-      message: "Đăng ký thành công! Bạn có thể đăng nhập ngay.",
-    });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
