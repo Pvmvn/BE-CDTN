@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import Masonry from "react-masonry-css";
 import blogCategoryApi from "../../api/blogCategoryApi";
 import { toast } from "react-toastify";
-import blogApi from "../../api/blogAPI";
+import blogApi from "../../api/blogApi";
 import { motion } from "framer-motion";
 import BlogCard from "../../components/BlogCard";
 import { Parallax } from "react-scroll-parallax";

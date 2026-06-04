@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import BlogCard from '../../components/BlogCard'
-import blogApi from '../../api/blogAPI';
+import blogApi from '../../api/blogApi';
 import { toast } from 'react-toastify';
 const MyStorySection = () => {
   const [randomBlogs, setRandomBlogs] = useState([]);

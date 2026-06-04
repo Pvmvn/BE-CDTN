@@ -6,7 +6,7 @@ import blogCategoryApi from "../../../api/blogCategoryApi";
 import usePreviewImage from "../../../hooks/usePreviewImage";
 import useLockBodyScroll from "../../../hooks/useLockBodyScroll";
 import useUpAndGetLinkImage from "../../../hooks/useUpAndGetLinkImage";
-import blogApi from "../../../api/blogAPI";
+import blogApi from "../../../api/blogApi";
 
 const ModalCreateBlog = ({
   isOpenModalCreateBlog,

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import blogApi from "../../api/blogAPI";
+import blogApi from "../../api/blogApi";
 import { useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import CarouselBlogRelated from "../../components/carousel/CarouselBlogRelated";

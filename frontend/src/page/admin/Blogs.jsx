@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Plus, Search, Edit2, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { formatDatetimeVN } from "../../utils/formatDatetimeVN";
-import blogApi from "../../api/blogAPI";
+import blogApi from "../../api/blogApi";
 import { AiOutlineEye } from "react-icons/ai";
 import ModalPreviewBlog from "../../components/modal/blog/ModalPreviewBlog";
 import ModalCreateBlog from "../../components/modal/blog/ModalCreateBlog";
