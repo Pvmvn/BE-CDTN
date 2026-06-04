@@ -219,7 +219,7 @@ export const recommendProducts = async (req, res) => {
       const parsed = extractJson(geminiText);
 
       if (!Array.isArray(parsed)) {
-        return res.status(502).json({ message: "AI tra ve dinh dang khong hop le" });
+        throw new Error("AI tra ve dinh dang khong hop le");
       }
 
       // Khớp dữ liệu AI trả về với dữ liệu sản phẩm trong CSDL
@@ -239,9 +239,12 @@ export const recommendProducts = async (req, res) => {
             source: "gemini", // Đánh dấu nguồn gợi ý từ AI
           };
         });
+        
+      if (!recommendations.length) {
+        throw new Error("AI khong tra ve san pham nao hop le");
+      }
     } catch (error) {
-      // Nếu API báo hết quota (429) hoặc server lỗi (503), tự động dùng thuật toán dự phòng
-      if (error.statusCode !== 429 && error.statusCode !== 503) throw error;
+      console.warn("AI Recommend fallback triggered:", error.message);
       recommendations = buildFallbackRecommendations(products, orders);
     }
 
