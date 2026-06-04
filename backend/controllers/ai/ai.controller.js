@@ -1,8 +1,26 @@
-import Order from "../../model/order.model.js";
-import Product from "../../model/product.model.js";
+import {
+  getActiveProducts,
+  getDiscountedPrice,
+  getUserOrderHistory,
+  normalizeProductText,
+  normalizeVietnameseText,
+  searchProducts,
+  MAX_PRODUCTS_FOR_AI,
+  MAX_RECOMMENDATION_ORDERS,
+} from "./ai.tools.js";
+import {
+  buildDescriptionBasedReply,
+  buildFallbackChatReply,
+  buildProductContextNote,
+  extractSearchCriteria,
+  formatOrdersForPrompt,
+  formatProductsForPrompt,
+  resolveContextProduct,
+  shouldLoadOrderHistoryForChat,
+  shouldUseProductSearch,
+} from "./ai.chat.helpers.js";
 
-const MAX_PRODUCTS_FOR_PROMPT = 40;
-const MAX_ORDERS_FOR_PROMPT = 12;
+// Controller điều phối AI: nối route, tool, helper và phản hồi từ model.
 const MAX_RECOMMENDATIONS = 5;
 
 // Hàm trích xuất dữ liệu JSON hợp lệ từ chuỗi văn bản trả về của AI
@@ -72,125 +90,6 @@ ${JSON.stringify(orderHistory)}
 `.trim();
 };
 
-const getDiscountedPrice = (product) => {
-  return Math.round(product.price * (1 - (product.discount || 0) / 100));
-};
-
-const normalizeVietnameseText = (value = "") =>
-  value
-    .toString()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/đ/g, "d")
-    .replace(/Đ/g, "D")
-    .toLowerCase();
-
-const normalizeProductText = (value = "") =>
-  normalizeVietnameseText(value).replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
-
-const isFollowUpProductQuestion = (message = "") => {
-  const normalizedMessage = normalizeVietnameseText(message);
-  return [
-    "mon do",
-    "ly do",
-    "do uong do",
-    "vay mon do",
-    "vay ly do",
-    "size lon",
-    "size vua",
-    "size nho",
-    "vi gi",
-    "mui vi",
-    "ngot khong",
-    "dang khong",
-    "de uong khong",
-  ].some((keyword) => normalizedMessage.includes(keyword));
-};
-
-const findMentionedProduct = (text = "", products = []) => {
-  const normalizedText = normalizeProductText(text);
-  if (!normalizedText) return null;
-
-  const scoredMatches = products
-    .map((product) => {
-      const normalizedName = normalizeProductText(product.name);
-      if (!normalizedName) return null;
-
-      if (normalizedText.includes(normalizedName)) {
-        return { product, score: normalizedName.length + 1000 };
-      }
-
-      const nameTokens = normalizedName.split(" ").filter(Boolean);
-      const matchedTokens = nameTokens.filter((token) => normalizedText.includes(token));
-
-      if (matchedTokens.length >= Math.max(2, Math.ceil(nameTokens.length / 2))) {
-        return { product, score: matchedTokens.length * 10 + normalizedName.length };
-      }
-
-      return null;
-    })
-    .filter(Boolean)
-    .sort((a, b) => b.score - a.score);
-
-  return scoredMatches[0]?.product || null;
-};
-
-const resolveContextProduct = (message, history, products) => {
-  const directMatch = findMentionedProduct(message, products);
-  if (directMatch) return directMatch;
-
-  if (!isFollowUpProductQuestion(message)) {
-    return null;
-  }
-
-  const reversedHistory = [...history].reverse();
-  for (const item of reversedHistory) {
-    const matchedProduct = findMentionedProduct(item.content, products);
-    if (matchedProduct) {
-      return matchedProduct;
-    }
-  }
-
-  return null;
-};
-
-const buildProductContextNote = (product) => {
-  if (!product) return "";
-
-  return `
-
-Mon dang duoc nhac trong ngu canh:
-- Ten mon: ${product.name}
-- Danh muc: ${product.productCategoryId?.name || "Khong ro"}
-- Gia: ${product.price}
-- Giam gia: ${product.discount || 0}
-- Mo ta: ${product.description || "Chua co mo ta"}
-`.trim();
-};
-
-const buildDescriptionBasedReply = (message, product) => {
-  if (!product?.description?.trim()) {
-    return null;
-  }
-
-  const normalizedMessage = normalizeVietnameseText(message);
-  const description = product.description.trim();
-
-  if (
-    normalizedMessage.includes("vi gi") ||
-    normalizedMessage.includes("mui vi") ||
-    normalizedMessage.includes("ngot khong") ||
-    normalizedMessage.includes("dang khong") ||
-    normalizedMessage.includes("beo khong") ||
-    normalizedMessage.includes("de uong khong")
-  ) {
-    return `Mon ${product.name} co mo ta nhu sau: ${description}`;
-  }
-
-  return null;
-};
-
-// Hàm gợi ý dự phòng (fallback) chạy cục bộ khi API Gemini bị lỗi hoặc hết quota
 const buildFallbackRecommendations = (products, orders) => {
   const orderedCount = new Map();
   const orderedCategoryCount = new Map();
@@ -245,78 +144,6 @@ const buildFallbackRecommendations = (products, orders) => {
     }));
 };
 
-const buildFallbackChatReply = (message, products, history = []) => {
-  const lowerMessage = message.toLowerCase();
-  const contextProduct = resolveContextProduct(message, history, products);
-  const descriptionBasedReply = buildDescriptionBasedReply(message, contextProduct);
-
-  if (descriptionBasedReply) {
-    return descriptionBasedReply;
-  }
-
-  const outOfScopeKeywords = [
-    "thoi tiet",
-    "ha noi",
-    "lam tho",
-    "viet tho",
-    "ke chuyen",
-    "jailbreak",
-    "bypass",
-    "hack",
-  ];
-
-  if (outOfScopeKeywords.some((keyword) => lowerMessage.includes(keyword))) {
-    return "Toi chi ho tro tu van mon, gia, uu dai va dat mon cua THREESTAR. Ban muon toi goi y do uong hoac mon nao phu hop khong?";
-  }
-
-  if (contextProduct && (lowerMessage.includes("size") || lowerMessage.includes("vị") || lowerMessage.includes("vi "))) {
-    if (lowerMessage.includes("size")) {
-      return `Hien tai THREESTAR chua co thong tin ve size cua mon ${contextProduct.name}. Neu ban muon, toi co the goi y them mon tuong tu trong menu.`;
-    }
-
-    return `Hien tai THREESTAR chua co thong tin chi tiet hon ngoai mo ta san pham cua mon ${contextProduct.name}. Ban co the xem mo ta mon hoac toi goi y mon khac cung nhom cho ban.`;
-  }
-
-  let candidates = products;
-
-  if (lowerMessage.includes("giảm") || lowerMessage.includes("sale")) {
-    candidates = products.filter((product) => product.discount > 0);
-  }
-
-  if (lowerMessage.includes("cà phê") || lowerMessage.includes("coffee")) {
-    candidates = products.filter((product) =>
-      `${product.name} ${product.productCategoryId?.name || ""}`.toLowerCase().includes("cà phê")
-      || `${product.name} ${product.productCategoryId?.name || ""}`.toLowerCase().includes("coffee")
-    );
-  }
-
-  if (lowerMessage.includes("matcha")) {
-    candidates = products.filter((product) =>
-      `${product.name} ${product.productCategoryId?.name || ""}`.toLowerCase().includes("matcha")
-    );
-  }
-
-  if (!candidates.length) {
-    candidates = products;
-  }
-
-  const selected = candidates
-    .slice()
-    .sort((a, b) => (b.discount || 0) - (a.discount || 0))
-    .slice(0, 3);
-
-  if (!selected.length) {
-    return "Hiện chưa có sản phẩm đang bán để tôi tư vấn. Bạn quay lại sau nhé.";
-  }
-
-  const names = selected
-    .map((product) => `${product.name} (${getDiscountedPrice(product).toLocaleString("vi-VN")}đ)`)
-    .join(", ");
-
-  return `Hiện tôi gợi ý ${names}. Gemini đang hết quota nên tôi đang tư vấn theo dữ liệu menu có sẵn.`;
-};
-
-// Hàm gọi API của Google Gemini để lấy phản hồi
 const callGemini = async (prompt, { responseMimeType = "text/plain" } = {}) => {
   const apiKey = process.env.GEMINI_API_KEY;
   const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
@@ -369,17 +196,10 @@ export const recommendProducts = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Lấy song song danh sách sản phẩm và lịch sử mua hàng của user
+    // Các tool này thay phần truy vấn cứng trong controller để sau này nối function calling dễ hơn.
     const [products, orders] = await Promise.all([
-      Product.find({ status: true })
-        .populate("productCategoryId", "name")
-        .sort({ discount: -1, createdAt: -1 })
-        .limit(MAX_PRODUCTS_FOR_PROMPT)
-        .lean(),
-      Order.find({ userId, status: { $ne: "CANCELLED" } })
-        .sort({ createdAt: -1 })
-        .limit(MAX_ORDERS_FOR_PROMPT)
-        .lean(),
+      getActiveProducts({ limit: MAX_PRODUCTS_FOR_AI }),
+      getUserOrderHistory({ userId, limit: MAX_RECOMMENDATION_ORDERS }),
     ]);
 
     if (!products.length) {
@@ -446,38 +266,6 @@ export const chatWithCoffeeAssistant = async (req, res) => {
       return res.status(400).json({ message: "Vui long nhap noi dung can hoi" });
     }
 
-    // Lấy thông tin sản phẩm và lịch sử mua hàng để tạo context
-    const [products, orders] = await Promise.all([
-      Product.find({ status: true })
-        .populate("productCategoryId", "name")
-        .sort({ discount: -1, createdAt: -1 })
-        .limit(MAX_PRODUCTS_FOR_PROMPT)
-        .lean(),
-      Order.find({ userId: req.user.id, status: { $ne: "CANCELLED" } })
-        .sort({ createdAt: -1 })
-        .limit(5)
-        .lean(),
-    ]);
-
-    // Format gọn lại danh sách sản phẩm
-    const productList = products.map((product) => ({
-      productId: product._id.toString(),
-      name: product.name,
-      category: product.productCategoryId?.name || "",
-      description: product.description || "",
-      price: product.price,
-      discount: product.discount || 0,
-    }));
-
-    // Format gọn lại lịch sử đặt hàng
-    const orderHistory = orders.map((order) => ({
-      createdAt: order.createdAt,
-      items: order.items.map((item) => ({
-        name: item.name,
-        quantity: item.quantity,
-      })),
-    }));
-
     const conversationHistory = Array.isArray(history)
       ? history
           .filter(
@@ -493,7 +281,25 @@ export const chatWithCoffeeAssistant = async (req, res) => {
           }))
       : [];
 
-    const contextProduct = resolveContextProduct(message, conversationHistory, products);
+    const useProductSearch = shouldUseProductSearch(message, conversationHistory);
+    const useOrderHistory = shouldLoadOrderHistoryForChat(message);
+    const searchCriteria = extractSearchCriteria(message);
+
+    // Chỉ gọi tool món khi câu hỏi thực sự cần dữ liệu menu, tránh nhét cả 40 món vào prompt mọi lần chat.
+    const products = useProductSearch
+      ? await getActiveProducts({ limit: MAX_PRODUCTS_FOR_AI })
+      : [];
+    const candidateProducts = useProductSearch
+      ? searchProducts({ products, ...searchCriteria })
+      : [];
+
+    // Chỉ lấy lịch sử đơn khi câu hỏi mang tính cá nhân hóa.
+    const orders = useOrderHistory
+      ? await getUserOrderHistory({ userId: req.user.id, limit: 5 })
+      : [];
+
+    const productContextPool = candidateProducts.length ? candidateProducts : products;
+    const contextProduct = resolveContextProduct(message, conversationHistory, productContextPool);
     const descriptionBasedReply = buildDescriptionBasedReply(message, contextProduct);
 
     if (descriptionBasedReply) {
@@ -502,10 +308,23 @@ export const chatWithCoffeeAssistant = async (req, res) => {
       });
     }
 
+    const productList = formatProductsForPrompt(
+      contextProduct && candidateProducts.length
+        ? [contextProduct, ...candidateProducts.filter((product) => product._id.toString() !== contextProduct._id.toString())]
+        : candidateProducts
+    );
+    const orderHistory = formatOrdersForPrompt(orders);
+    const productSection = productList.length
+      ? `Danh sach san pham lien quan:\n${JSON.stringify(productList)}`
+      : "Khong co du lieu menu nao duoc nap cho cau hoi nay.";
+    const orderSection = orderHistory.length
+      ? `Lich su dat mon gan day:\n${JSON.stringify(orderHistory)}`
+      : "Khong su dung lich su dat mon cho cau hoi nay.";
+
     const prompt = `
 Bạn là nhân viên tư vấn món của quán THREESTAR.
 Hãy trả lời khách bằng tiếng Việt, thân thiện, ngắn gọn trong tối đa 4 câu.
-Chỉ tư vấn dựa trên danh sách sản phẩm đang bán bên dưới.
+Chỉ tư vấn dựa trên dữ liệu món đã được cung cấp khi có liên quan.
 Nếu khách hỏi ngoài phạm vi menu, đặt món, vị đồ uống, giá, ưu đãi hoặc gợi ý món, hãy lịch sự hướng khách quay lại chủ đề THREESTAR.
 Bạn phải hiểu ngữ cảnh hội thoại nhiều lượt. Nếu khách nói "món đó", "ly đó", "vậy món đó", hãy suy ra món gần nhất đã được nhắc trong lịch sử hội thoại.
 Nếu khách hỏi về size, topping, độ ngọt, đá... mà dữ liệu không có, hãy nói rõ chưa có thông tin đó và vẫn bám theo món gần nhất trong ngữ cảnh.
@@ -514,11 +333,9 @@ Khi gợi ý món, nêu tên món và lý do phù hợp. Không bịa món ngoà
 
 Khách hàng: ${req.user.name || "Khách hàng"}
 
-Danh sách sản phẩm đang bán:
-${JSON.stringify(productList)}
+${productSection}
 
-Lịch sử đặt món gần đây:
-${JSON.stringify(orderHistory)}
+${orderSection}
 
 Lịch sử hội thoại gần nhất:
 ${JSON.stringify(conversationHistory)}
@@ -537,7 +354,11 @@ ${message.trim()}
     } catch (error) {
       // Nếu API AI quá tải (429, 503), tự động kích hoạt tính năng chat dự phòng
       if (error.statusCode !== 429 && error.statusCode !== 503) throw error;
-      reply = buildFallbackChatReply(message, products, conversationHistory);
+      if (!useProductSearch) {
+        reply = "Toi ho tro tu van mon, gia va uu dai cua THREESTAR. Ban muon toi goi y do uong hoac mon nao cu the khong?";
+      } else {
+        reply = buildFallbackChatReply(message, productContextPool, conversationHistory);
+      }
     }
 
     return res.json({
