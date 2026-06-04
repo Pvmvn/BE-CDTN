@@ -46,7 +46,8 @@ export const registerUser = async (req, res) => {
       socketTimeout: 5000,
     });
 
-    const verifyLink = `https://be-cdtn.vercel.app/account/verify-email?token=${verifyToken}`;
+    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+    const verifyLink = `${clientUrl}/account/verify-email?token=${verifyToken}`;
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
@@ -137,7 +138,8 @@ export const forgotPassword = async (req, res) => {
       greetingTimeout: 5000,
       socketTimeout: 5000,
     });
-    const resetLink = `https://be-cdtn.vercel.app/account/reset-password?token=${resetToken}`;
+    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+    const resetLink = `${clientUrl}/account/reset-password?token=${resetToken}`;
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
