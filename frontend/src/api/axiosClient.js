@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const axiosClient = axios.create({
-  baseURL: "https://be-cdtn.onrender.com/api", // URL gốc của backend
+  baseURL: "http://localhost:5000/api", // URL gốc của backend
   headers: {
     "Content-Type": "application/json",
   },

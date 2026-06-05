@@ -93,7 +93,7 @@ export default function Reservations() {
   }, [newReservationCount]);
 
   useEffect(() => {
-    const socket = io("https://be-cdtn.onrender.com");
+    const socket = io("http://localhost:5000");
 
     socket.on("connect", () => {
       socket.emit("join_admin");
