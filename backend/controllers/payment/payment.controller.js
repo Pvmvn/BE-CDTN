@@ -343,3 +343,25 @@ export const handleVnpayReturn = async (req, res) => {
     session.endSession();
   }
 };
+
+export const getPaymentResultByOrderId = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    const order = await Order.findById(orderId)
+      .select(
+        "_id paymentStatus paymentMethod totalPrice vnp_Amount vnp_TransactionNo vnp_PayDate createdAt delivery items voucherDiscount status"
+      );
+
+    if (!order) {
+      return res.status(404).json({ message: "Khong tim thay don hang" });
+    }
+
+    return res.status(200).json(order);
+  } catch (err) {
+    console.error("GET PAYMENT RESULT ERROR:", err);
+    return res
+      .status(500)
+      .json({ message: "Lay ket qua thanh toan that bai" });
+  }
+};

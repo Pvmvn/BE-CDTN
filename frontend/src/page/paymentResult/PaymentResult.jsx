@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { formatCurrencyVN } from "../../utils/formatCurrencyVN";
 import { formatDatetimeVNOfVNPAY } from "../../utils/formatDatetimeVNOfVNPAY";
-import orderApi from "../../api/orderApi";
+import paymentApi from "../../api/paymentApi";
 import ErrorPage from "../../error/ErrorPage";
 import { toast } from "react-toastify";
 import useCartStore from "../../store/cartStore";
@@ -32,8 +32,12 @@ const PaymentResult = () => {
   }, []);
   useEffect(() => {
     const getOrderById = async () => {
+      if (!orderId) {
+        setLoading(false);
+        return;
+      }
       try {
-        const orderData = await orderApi.getOrderById(orderId);
+        const orderData = await paymentApi.getPaymentResult(orderId);
         setOrder(orderData);
       } catch {
         toast.error("Đã có lỗi xảy ra, vui lòng thử lại");
