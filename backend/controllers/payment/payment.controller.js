@@ -234,13 +234,14 @@ export const createPayment = async (req, res) => {
     scheduleOrderCancellation(newOrder._id);
 
     const txnRef = newOrder._id.toString();
+    const backendUrl = process.env.BACKEND_URL || `${req.protocol}://${req.get("host")}`;
     const vnpayResponse = await vnpay.buildPaymentUrl({
       vnp_Amount: total,
       vnp_IpAddr: getIPv4(req.ip || "127.0.0.1"),
       vnp_TxnRef: txnRef,
       vnp_OrderInfo: `Thanh toan don hang ${txnRef}`,
       vnp_OrderType: ProductCode.Other,
-      vnp_ReturnUrl: "http://localhost:5000/api/payment/vnpay-return",
+      vnp_ReturnUrl: `${backendUrl}/api/payment/vnpay-return`,
       vnp_Locale: VnpLocale.VN,
       vnp_CreateDate: dateFormat(new Date()),
     });
@@ -265,13 +266,15 @@ export const handleVnpayReturn = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
+  const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+
   try {
     const verify = vnpay.verifyReturnUrl(req.query);
 
     if (!verify.isVerified) {
       await session.abortTransaction();
       return res.redirect(
-        `http://localhost:5173/payment-result?status=error&code=97&message=${encodeURIComponent(
+        `${clientUrl}/payment-result?status=error&code=97&message=${encodeURIComponent(
           "Chữ ký không hợp lệ"
         )}`
       );
@@ -283,7 +286,7 @@ export const handleVnpayReturn = async (req, res) => {
     if (!order) {
       await session.abortTransaction();
       return res.redirect(
-        `http://localhost:5173/payment-result?status=error&code=01&message=${encodeURIComponent(
+        `${clientUrl}/payment-result?status=error&code=01&message=${encodeURIComponent(
           "Không tìm thấy đơn hàng"
         )}`
       );
@@ -299,7 +302,7 @@ export const handleVnpayReturn = async (req, res) => {
       await session.commitTransaction();
 
       return res.redirect(
-        `http://localhost:5173/payment-result?orderId=${order._id}`
+        `${clientUrl}/payment-result?orderId=${order._id}`
       );
     }
 
@@ -326,13 +329,13 @@ export const handleVnpayReturn = async (req, res) => {
     await session.commitTransaction();
 
     return res.redirect(
-      `http://localhost:5173/payment-result?&orderId=${order._id}`
+      `${clientUrl}/payment-result?&orderId=${order._id}`
     );
   } catch (err) {
     await session.abortTransaction();
     console.error("VNPAY CALLBACK ERROR:", err);
     return res.redirect(
-      `http://localhost:5173/payment-result?status=error&message=${encodeURIComponent(
+      `${clientUrl}/payment-result?status=error&message=${encodeURIComponent(
         "Xử lý callback thất bại"
       )}`
     );
