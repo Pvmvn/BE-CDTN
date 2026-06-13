@@ -10,6 +10,7 @@ import useAuthStore from "../../store/authStore";
 const OfflineOrderPage = () => {
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
+  const [pagerNumber, setPagerNumber] = useState("");
   const [tableCount, setTableCount] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
@@ -146,6 +147,12 @@ const OfflineOrderPage = () => {
 
   // Tạo đơn
   const handleCreateOrder = async () => {
+    const parsedPagerNumber = Number(pagerNumber);
+    if (!Number.isInteger(parsedPagerNumber) || parsedPagerNumber <= 0) {
+      toast.error("Thiếu số thẻ");
+      return;
+    }
+
     if (tableCount <= 0 || tableCount > 24) {
       toast.error("Số bàn phải từ 1 đến 24");
       return;
@@ -164,6 +171,7 @@ const OfflineOrderPage = () => {
       }
       const orderData = {
         userId: user.id,
+        pagerNumber: parsedPagerNumber,
         items: cart.map((item) => ({
           productId: item.productId,
           quantity: item.quantity,
@@ -174,6 +182,7 @@ const OfflineOrderPage = () => {
       const result = await orderApi.createOrderOffline(orderData);
       toast.success(`Tạo đơn thành công! Số thẻ: ${result.order?.pagerNumber || "N/A"}`);
       setCart([]);
+      setPagerNumber("");
       setTableCount(1);
       loadTableUsage();
       loadOnlineReservations();
@@ -264,22 +273,26 @@ const OfflineOrderPage = () => {
         </div>
 
         {/* Số thẻ bàn */}
-        <div className="mb-6 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3">
-          <p className="text-sm font-medium text-blue-800">Số thẻ bàn</p>
-          <p className="text-xs text-blue-700 mt-1">
-            Hệ thống tự cấp số thẻ còn trống khi tạo đơn.
-          </p>
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Số thẻ bàn <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="number"
+            min={1}
+            value={pagerNumber}
+            onChange={(e) => setPagerNumber(e.target.value)}
+            placeholder="Nhập số thẻ..."
+            className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+          />
         </div>
 
         {/* Số bàn đang dùng */}
         <div className="mb-6">
-          <div className="flex items-center justify-between gap-3 mb-2">
+          <div className="mb-2">
             <label className="block text-sm font-medium text-gray-700">
               Chọn số lượng bàn <span className="text-red-500">*</span>
             </label>
-            <span className="px-3 py-1 rounded-full bg-orange-50 text-orange-700 text-xs font-semibold whitespace-nowrap">
-              Đặt online: {tableUsage.onlineReservedTableCount || 0} bàn
-            </span>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-3">
@@ -308,14 +321,7 @@ const OfflineOrderPage = () => {
                 <FiPlus />
               </button>
             </div>
-            <div className="flex-1 min-w-[150px] rounded-lg border border-blue-100 bg-blue-50 px-3 py-2">
-              <p className="text-xs text-blue-700 font-medium">
-                Đang chọn
-              </p>
-              <p className="text-lg font-bold text-blue-800">
-                {tableCount}/{tableUsage.maxTables || 24} bàn
-              </p>
-            </div>
+            
           </div>
           <p className="mt-2 text-xs text-gray-500">
             Đang phục vụ tại quán: {tableUsage.offlineTableCount || 0} bàn, còn trống sau đơn này:{" "}

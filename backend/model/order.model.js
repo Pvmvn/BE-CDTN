@@ -13,6 +13,15 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       default: null,
     },
+    pagerStatus: {
+      type: String,
+      enum: ["HOLDING", "RETURNED"],
+      default: null,
+    },
+    pagerReturnedAt: {
+      type: Date,
+      default: null,
+    },
     tableCount: {
       type: Number,
       min: 1,
@@ -100,7 +109,7 @@ orderSchema.index(
   {
     unique: true,
     partialFilterExpression: {
-      status: "PROCESSING",
+      pagerStatus: "HOLDING",
       pagerNumber: { $type: "number" },
     },
   }

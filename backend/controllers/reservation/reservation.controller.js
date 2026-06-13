@@ -25,6 +25,64 @@ const getActiveOfflineTableCount = async () => {
 };
 
 // GET ALL với date filter (mặc định hôm nay)
+const getCurrentSlot = () => {
+  const now = new Date();
+  const date = now.toISOString().split("T")[0];
+  const slotMinute = now.getMinutes() < 30 ? "00" : "30";
+  const time = `${now.getHours().toString().padStart(2, "0")}:${slotMinute}`;
+
+  return { date, time };
+};
+
+const getReservationTableCountBySlot = async ({ date, time }) => {
+  const rows = await Reservation.aggregate([
+    {
+      $match: {
+        date,
+        time,
+        status: { $ne: "CANCELLED" },
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        total: { $sum: { $ifNull: ["$tableCount", "$people"] } },
+      },
+    },
+  ]);
+
+  return rows[0]?.total || 0;
+};
+
+export const getTableUsage = async (req, res) => {
+  try {
+    const slot =
+      req.query.date && req.query.time
+        ? { date: req.query.date, time: req.query.time }
+        : getCurrentSlot();
+
+    const [offlineTableCount, onlineReservedTableCount] = await Promise.all([
+      getActiveOfflineTableCount(),
+      getReservationTableCountBySlot(slot),
+    ]);
+
+    const usedTableCount = offlineTableCount + onlineReservedTableCount;
+
+    res.json({
+      maxTables: MAX_TABLES,
+      date: slot.date,
+      time: slot.time,
+      offlineTableCount,
+      onlineReservedTableCount,
+      usedTableCount,
+      availableTableCount: Math.max(0, MAX_TABLES - usedTableCount),
+    });
+  } catch (err) {
+    console.error("GET TABLE USAGE ERROR:", err);
+    res.status(500).json({ message: "Không lấy được tình trạng bàn" });
+  }
+};
+
 export const getAllReservations = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;

@@ -11,26 +11,6 @@ import {
 } from "../../utils/inventoryCost.js";
 
 const MAX_TABLES = 24;
-const MAX_PAGER_NUMBER = 999;
-
-const getNextAvailablePagerNumber = async ({ session = null } = {}) => {
-  const activeOrders = await Order.find({
-    orderType: "OFFLINE",
-    status: "PROCESSING",
-    pagerNumber: { $type: "number" },
-  })
-    .select("pagerNumber")
-    .session(session);
-
-  const usedPagers = new Set(activeOrders.map((order) => order.pagerNumber));
-  for (let pagerNumber = 1; pagerNumber <= MAX_PAGER_NUMBER; pagerNumber += 1) {
-    if (!usedPagers.has(pagerNumber)) {
-      return pagerNumber;
-    }
-  }
-
-  return null;
-};
 
 const getProcessingOfflineTableCount = async ({ excludeOrderId = null, session = null } = {}) => {
   const match = {
@@ -85,12 +65,18 @@ export const createOrderOffline = async (req, res) => {
   session.startTransaction();
 
   try {
-    const { userId, items, tableCount = 1 } = req.body;
+    const { userId, items, tableCount = 1, pagerNumber } = req.body;
     const requestedTables = Number(tableCount);
+    const requestedPagerNumber = Number(pagerNumber);
     // VALIDATE
     if (!items || !items.length) {
       await session.abortTransaction();
       return res.status(400).json({ message: "Danh sách món trống" });
+    }
+
+    if (!Number.isInteger(requestedPagerNumber) || requestedPagerNumber <= 0) {
+      await session.abortTransaction();
+      return res.status(400).json({ message: "Thiếu số thẻ" });
     }
 
     if (!Number.isInteger(requestedTables) || requestedTables <= 0 || requestedTables > MAX_TABLES) {
@@ -110,10 +96,15 @@ export const createOrderOffline = async (req, res) => {
       });
     }
 
-    const pagerNumber = await getNextAvailablePagerNumber({ session });
-    if (!pagerNumber) {
+    const existingPagerOrder = await Order.findOne({
+      orderType: "OFFLINE",
+      pagerStatus: "HOLDING",
+      pagerNumber: requestedPagerNumber,
+    }).session(session);
+
+    if (existingPagerOrder) {
       await session.abortTransaction();
-      return res.status(400).json({ message: "Đã hết số thẻ phục vụ đang khả dụng" });
+      return res.status(400).json({ message: "Số thẻ đang được sử dụng" });
     }
 
     // BƯỚC 1: TÍNH TIỀN + CHUẨN HÓA ITEMS
@@ -188,7 +179,9 @@ export const createOrderOffline = async (req, res) => {
       paymentMethod: "CASH",
       paymentStatus: "SUCCESS",
       status: "PROCESSING",
-      pagerNumber,
+      pagerNumber: requestedPagerNumber,
+      pagerStatus: "HOLDING",
+      pagerReturnedAt: null,
       tableCount: requestedTables,
     });
 
@@ -197,7 +190,7 @@ export const createOrderOffline = async (req, res) => {
     await session.commitTransaction();
 
     return res.status(201).json({
-      message: `Tạo đơn offline thành công - thẻ số ${pagerNumber}`,
+      message: `Tạo đơn offline thành công - thẻ số ${requestedPagerNumber}`,
       order: newOrder,
     });
   } catch (err) {
@@ -393,6 +386,11 @@ export const completeOrder = async (req, res) => {
       });
     }
     order.status = "COMPLETED";
+    // Tự động trả thẻ khi hoàn tất đơn
+    if (order.pagerStatus === "HOLDING" || !order.pagerStatus) {
+      order.pagerStatus = "RETURNED";
+      order.pagerReturnedAt = new Date();
+    }
     await order.save();
     const updatedOrder = await Order.findById(id)
       .populate("userId", "name email role")
@@ -492,6 +490,11 @@ export const cancelOrder = async (req, res) => {
 
     order.status = "CANCELLED";
     order.paymentStatus = "FAILED";
+    // Tự động trả thẻ khi hủy đơn
+    if (order.pagerStatus === "HOLDING" || !order.pagerStatus) {
+      order.pagerStatus = "RETURNED";
+      order.pagerReturnedAt = new Date();
+    }
 
     if (order.voucherId && order.paymentMethod === "CASH") {
       await Voucher.findByIdAndUpdate(
@@ -516,5 +519,37 @@ export const cancelOrder = async (req, res) => {
     res.status(500).json({ message: "Hủy đơn hàng thất bại", error: err.message });
   } finally {
     session.endSession();
+  }
+};
+
+// Thu hồi thẻ bàn (đồ uống đã xong, lấy lại thẻ)
+export const returnPager = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const order = await Order.findById(id);
+    if (!order) {
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    }
+
+    if (order.orderType !== "OFFLINE") {
+      return res.status(400).json({ message: "Chỉ đơn tại quán mới có thẻ bàn" });
+    }
+
+    if (order.pagerStatus === "RETURNED") {
+      return res.status(400).json({ message: "Thẻ bàn đã được thu hồi rồi" });
+    }
+
+    order.pagerStatus = "RETURNED";
+    order.pagerReturnedAt = new Date();
+    await order.save();
+
+    const updatedOrder = await Order.findById(id)
+      .populate("userId", "name email role")
+      .populate("voucherId", "code");
+
+    res.json(updatedOrder);
+  } catch (err) {
+    console.error("RETURN PAGER ERROR:", err);
+    res.status(500).json({ message: "Thu hồi thẻ bàn thất bại", error: err.message });
   }
 };

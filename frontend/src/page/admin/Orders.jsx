@@ -9,6 +9,7 @@ import { AiOutlineEye } from "react-icons/ai";
 import { BsClipboardCheckFill } from "react-icons/bs";
 import { FaMoneyBillWave, FaTimesCircle } from "react-icons/fa";
 import { FiMinus, FiPlus } from "react-icons/fi";
+import { IoHandRight } from "react-icons/io5";
 import ModalOrderDetail from "../../components/modal/adminOrders/ModalDetailOrder";
 import ModalConfirmCompleteOrder from "../../components/modal/adminOrders/ModalConfirmCompleteOrder";
 import ModalConfirm from "../../components/modal/adminReservation/ModalConfirm";
@@ -198,6 +199,17 @@ export default function Orders() {
       toast.success("Đã cập nhật số bàn");
     } catch (err) {
       toast.error(err.response?.data?.message || "Lỗi khi cập nhật số bàn");
+    }
+  };
+
+  const handleReturnPager = async (orderId) => {
+    if (!window.confirm("Xác nhận thu hồi thẻ bàn?")) return;
+    try {
+      const res = await orderApi.returnPager(orderId);
+      setOrders((prev) => prev.map((o) => (o._id === orderId ? res : o)));
+      toast.success("Đã thu hồi thẻ bàn");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Lỗi khi thu hồi thẻ bàn");
     }
   };
 
@@ -392,6 +404,7 @@ const handleQuickDate = (type) => {
                 "Tổng tiền",
                 "Số lượng món",
                 "Số bàn",
+                "Thẻ bàn",
                 "Thanh toán",
                 "Trạng thái",
                 "Thao tác",
@@ -460,6 +473,39 @@ const handleQuickDate = (type) => {
                       </button>
                     </div>
                   ) : (
+                    <span className="text-gray-400">-</span>
+                  )}
+                </td>
+                <td className="px-6 py-4 text-sm">
+                  {order.orderType === "OFFLINE" && order.pagerNumber ? (() => {
+                    const isHolding = order.pagerStatus === "HOLDING" || (!order.pagerStatus && order.status === "PROCESSING");
+                    const isReturned = order.pagerStatus === "RETURNED";
+                    return (
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-gray-800">#{order.pagerNumber}</span>
+                        {isHolding ? (
+                          <>
+                            <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded text-xs font-medium">
+                              Đang giữ
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleReturnPager(order._id)}
+                              className="flex items-center gap-1 px-2 py-1 bg-teal-50 text-teal-700 border border-teal-200 rounded text-xs font-medium hover:bg-teal-100 transition-colors cursor-pointer"
+                              title="Thu hồi thẻ bàn"
+                            >
+                              <IoHandRight className="w-3.5 h-3.5" />
+                              Thu thẻ
+                            </button>
+                          </>
+                        ) : isReturned ? (
+                          <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium">
+                            Đã thu
+                          </span>
+                        ) : null}
+                      </div>
+                    );
+                  })() : (
                     <span className="text-gray-400">-</span>
                   )}
                 </td>
