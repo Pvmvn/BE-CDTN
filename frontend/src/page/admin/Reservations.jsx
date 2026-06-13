@@ -290,7 +290,7 @@ export default function Reservations() {
                 "SĐT",
                 "Ngày đặt",
                 "Giờ đặt",
-                "Số bàn",
+                "Số lượng bàn",
                 "Trạng thái",
                 "Thao tác",
               ].map((h) => (
