@@ -411,7 +411,7 @@ const handleQuickDate = (type) => {
               ].map((head) => (
                 <th
                   key={head}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                  className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap"
                 >
                   {head}
                 </th>
@@ -421,11 +421,11 @@ const handleQuickDate = (type) => {
           <tbody className="bg-white divide-y">
             {filteredOrders.map((order, index) => (
               <tr key={order._id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 text-sm">{index + 1}</td>
-                <td className="px-6 py-4 text-sm font-mono">
+                <td className="px-3 py-4 text-sm whitespace-nowrap">{index + 1}</td>
+                <td className="px-3 py-3 text-sm font-mono whitespace-nowrap">
                   #{order._id?.slice(-6)}
                 </td>
-                <td className="px-6 py-4 text-sm">
+                <td className="px-3 py-3 text-sm whitespace-nowrap">
                   {order.orderType === "ONLINE" ? (
                     <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs font-semibold">
                       ONLINE
@@ -436,18 +436,18 @@ const handleQuickDate = (type) => {
                     </span>
                   )}
                 </td>
-                <td className="px-6 py-4 text-sm whitespace-nowrap">
+                <td className="px-3 py-4 text-sm whitespace-nowrap">
                   {formatDatetimeVN(order.createdAt)}
                 </td>
-                <td className="px-6 py-4 text-sm font-semibold text-green-600">
+                <td className="px-3 py-4 text-sm font-semibold text-green-600 whitespace-nowrap">
                   {formatCurrencyVN(order.totalPrice)}
                 </td>
-                <td className="px-6 py-4 text-sm text-center">
+                <td className="px-3 py-4 text-sm text-center whitespace-nowrap">
                   <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded font-medium">
                     {order.items.length} món
                   </span>
                 </td>
-                <td className="px-6 py-4 text-sm">
+                <td className="px-3 py-3 text-sm whitespace-nowrap">
                   {order.orderType === "OFFLINE" ? (
                     <div className="flex items-center gap-2">
                       <button
@@ -476,7 +476,7 @@ const handleQuickDate = (type) => {
                     <span className="text-gray-400">-</span>
                   )}
                 </td>
-                <td className="px-6 py-4 text-sm">
+                <td className="px-3 py-3 text-sm whitespace-nowrap">
                   {order.orderType === "OFFLINE" && order.pagerNumber ? (() => {
                     const isHolding = order.pagerStatus === "HOLDING" || (!order.pagerStatus && order.status === "PROCESSING");
                     const isReturned = order.pagerStatus === "RETURNED";
@@ -509,7 +509,7 @@ const handleQuickDate = (type) => {
                     <span className="text-gray-400">-</span>
                   )}
                 </td>
-                <td className="px-6 py-4 text-sm">
+                <td className="px-3 py-3 text-sm whitespace-nowrap">
                   <span
                     className={`
                       px-2 py-1 rounded text-xs font-semibold
@@ -535,7 +535,7 @@ const handleQuickDate = (type) => {
                     {order.paymentStatus === "FAILED" && "Thất bại"}
                   </span>
                 </td>
-                <td className="px-6 py-4 text-sm">
+                <td className="px-3 py-3 text-sm whitespace-nowrap">
                   <span
                     className={`
                       px-3 py-1 rounded-full text-xs font-semibold inline-block whitespace-nowrap
@@ -561,7 +561,7 @@ const handleQuickDate = (type) => {
                     {order.status === "CANCELLED" && "Đã hủy"}
                   </span>
                 </td>
-                <td className="px-6 py-4 text-sm">
+                <td className="px-3 py-3 text-sm whitespace-nowrap">
                   <div className="flex items-center space-x-3">
                     <button
                       className="text-orange-600 hover:text-orange-800 transition-colors cursor-pointer"
