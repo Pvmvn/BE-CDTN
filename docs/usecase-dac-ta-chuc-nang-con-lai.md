@@ -921,7 +921,7 @@ sequenceDiagram
     FE-->>User: Hien thi loi
   end
   deactivate BE
-
+  
   User->>FE: Nhap mat khau cu va mat khau moi
   FE->>BE: PUT /auth/change-password
   activate BE

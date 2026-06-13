@@ -93,7 +93,7 @@ export default function Reservations() {
   }, [newReservationCount]);
 
   useEffect(() => {
-    const socket = io("https://be-cdtn.onrender.com");
+    const socket = io("http://localhost:5000");
 
     socket.on("connect", () => {
       socket.emit("join_admin");
@@ -290,8 +290,7 @@ export default function Reservations() {
                 "SĐT",
                 "Ngày đặt",
                 "Giờ đặt",
-                "Số bàn",
-                "Số người",
+                "Số lượng bàn",
                 "Trạng thái",
                 "Thao tác",
               ].map((h) => (
@@ -313,8 +312,7 @@ export default function Reservations() {
                   <td className="px-6 py-4">{r.phone}</td>
                   <td className="px-6 py-4">{formatDate(r.date)}</td>
                   <td className="px-6 py-4">{r.time}</td>
-                  <td className="px-6 py-4">{r.tableNumber || "-"}</td>
-                  <td className="px-6 py-4">{r.people}</td>
+                  <td className="px-6 py-4">{r.tableCount || r.people || 1}</td>
                   <td className="px-6 py-4">
                     <span
                       className={`px-2 py-1 rounded text-xs font-semibold ${

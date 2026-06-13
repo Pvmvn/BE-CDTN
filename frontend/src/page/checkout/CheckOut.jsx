@@ -113,6 +113,36 @@ const CheckOut = () => {
   }, [voucherCode]);
 
   useEffect(() => {
+    const fetchBestVoucher = async () => {
+      if (cart.length === 0 || !user?.id) {
+        setDiscount(0);
+        setVoucherUsed(null);
+        return;
+      }
+      try {
+        const data = {
+          items: cart.map((item) => item.productId.productCategoryId),
+          total: subTotal,
+          userId: user.id,
+        };
+        const res = await voucherApi.findBestVoucher(data);
+        if (res.found) {
+          setDiscount(res.discount);
+          setVoucherUsed(res);
+          setError("");
+        } else {
+          setDiscount(0);
+          setVoucherUsed(null);
+        }
+      } catch (error) {
+        console.error("Lỗi tìm voucher tự động:", error);
+      }
+    };
+
+    fetchBestVoucher();
+  }, [cart, subTotal, user?.id]);
+
+  useEffect(() => {
     if (hasUnavailableItems) {
       toast.error("Có sản phẩm trong giỏ hàng đã hết hàng");
     }

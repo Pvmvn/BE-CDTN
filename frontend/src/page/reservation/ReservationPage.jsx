@@ -12,7 +12,7 @@ function getDeliverySlots() {
   let startMinute = now.getMinutes();
 
   const firstHour = 8;
-  const lastHour = 22;
+  const lastHour = 23;
 
   if (startHour < firstHour) {
     startHour = firstHour;
@@ -44,7 +44,6 @@ function getDeliverySlots() {
 const ReservationPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [assignedTableNumber, setAssignedTableNumber] = useState(null);
 
   // Generate time slots
   const timeSlots = useMemo(() => getDeliverySlots(), []);
@@ -67,7 +66,7 @@ const ReservationPage = () => {
       email: "",
       date: getTodayDate(),
       time: timeSlots[0] || "",
-      people: 1,
+      tableCount: 1,
       note: "",
     },
   });
@@ -89,13 +88,12 @@ const ReservationPage = () => {
         email: data.email.trim(),
         date: data.date,
         time: data.time,
-        people: Number(data.people),
+        tableCount: Number(data.tableCount),
         note: data.note || "",
       };
 
-      const reservation = await reservationApi.create(payload);
+      await reservationApi.create(payload);
 
-      setAssignedTableNumber(reservation.tableNumber);
       setIsSuccess(true);
       reset({
         name: "",
@@ -103,14 +101,13 @@ const ReservationPage = () => {
         email: "",
         date: getTodayDate(),
         time: timeSlots[0] || "",
-        people: 1,
+        tableCount: 1,
         note: "",
       });
 
       // Reset success state sau 5s
       setTimeout(() => {
         setIsSuccess(false);
-        setAssignedTableNumber(null);
       }, 5000);
     } catch (error) {
       toast.error(
@@ -147,7 +144,7 @@ const ReservationPage = () => {
               <ul className="space-y-3 text-gray-600">
                 <li className="flex items-start gap-2">
                   <span className="text-amber-600 mt-0.5">•</span>
-                  <span>Chỉ nhận đặt bàn trong ngày từ 8h đến 21h30</span>
+                  <span>Chỉ nhận đặt bàn trong ngày từ 8h đến 22h30</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-amber-600 mt-0.5">•</span>
@@ -299,7 +296,7 @@ const ReservationPage = () => {
               <div>
                 <label className="flex items-center gap-2 text-gray-700 font-semibold mb-2">
                   <Clock className="w-5 h-5 text-orange-600" />
-                  Giờ (8h-21h30) *
+                  Giờ (8h-22h30) *
                 </label>
                 <select
                   {...register("time", {
@@ -331,26 +328,26 @@ const ReservationPage = () => {
               <div>
                 <label className="flex items-center gap-2 text-gray-700 font-semibold mb-2">
                   <Users className="w-5 h-5 text-orange-600" />
-                  Số người *
+                  Chọn số lượng bàn *
                 </label>
                 <input
                   type="number"
                   min="1"
-                  max="20"
-                  {...register("people", {
-                    required: "Vui lòng nhập số người",
-                    min: { value: 1, message: "Tối thiểu 1 người" },
-                    max: { value: 20, message: "Tối đa 20 người" },
+                  max="24"
+                  {...register("tableCount", {
+                    required: "Vui lòng nhập số bàn",
+                    min: { value: 1, message: "Tối thiểu 1 bàn" },
+                    max: { value: 24, message: "Tối đa 24 bàn" },
                     valueAsNumber: true,
                   })}
                   className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 outline-none transition ${
-                    errors.people ? "border-red-500" : "border-gray-300"
+                    errors.tableCount ? "border-red-500" : "border-gray-300"
                   }`}
                   placeholder="1"
                 />
-                {errors.people && (
+                {errors.tableCount && (
                   <p className="text-red-500 text-sm mt-1">
-                    {errors.people.message}
+                    {errors.tableCount.message}
                   </p>
                 )}
               </div>
@@ -395,11 +392,6 @@ const ReservationPage = () => {
                       <p className="text-sm text-green-600 mt-1">
                         Chúng tôi sẽ giữ bàn cho bạn. Cảm ơn bạn đã tin tưởng!
                       </p>
-                      {assignedTableNumber && (
-                        <p className="text-sm font-semibold text-green-700 mt-1">
-                          Số bàn của bạn: Bàn {assignedTableNumber}
-                        </p>
-                      )}
                     </div>
                   </div>
                 </div>

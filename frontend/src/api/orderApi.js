@@ -32,6 +32,14 @@ const orderApi = {
   cancelOrder: async (id) => {
     const res = await axiosClient.patch(`/orders/${id}/cancel`);
     return res.data;
+  },
+  updateTableCount: async (id, tableCount) => {
+    const res = await axiosClient.patch(`/orders/${id}/table-count`, { tableCount });
+    return res.data;
+  },
+  returnPager: async (id) => {
+    const res = await axiosClient.patch(`/orders/${id}/return-pager`);
+    return res.data;
   }
 }
 export default orderApi

@@ -15,6 +15,11 @@ const reservationApi = {
     return res.data;
   },
 
+  getTableUsage: async () => {
+    const res = await axiosClient.get("/reservations/table-usage");
+    return res.data;
+  },
+
   confirm: async (id) => {
     const res = await axiosClient.patch(`/reservations/${id}/confirm`);
     return res.data.reservation; 

@@ -301,6 +301,12 @@ const ModalOrderDetail = ({
                     #{orderData.pagerNumber || "N/A"}
                   </span>
                 </div>
+                <div className="flex justify-between py-2 border-b border-gray-100">
+                  <span className="text-gray-600">Số bàn đang dùng:</span>
+                  <span className="font-bold text-xl text-orange-600 bg-orange-50 px-4 py-2 rounded-lg">
+                    {orderData.tableCount || 1}
+                  </span>
+                </div>
                 <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
                   <p className="text-sm text-blue-800">
                     <svg

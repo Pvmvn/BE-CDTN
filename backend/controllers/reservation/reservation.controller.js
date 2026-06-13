@@ -1,8 +1,88 @@
 import Reservation from "../../model/reservation.model.js";
+import Order from "../../model/order.model.js";
 
 const MAX_TABLES = 24;
+const OPEN_HOUR = 8;
+const CLOSE_HOUR = 23;
+
+const getActiveOfflineTableCount = async () => {
+  const rows = await Order.aggregate([
+    {
+      $match: {
+        orderType: "OFFLINE",
+        status: "PROCESSING",
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        total: { $sum: { $ifNull: ["$tableCount", 1] } },
+      },
+    },
+  ]);
+
+  return rows[0]?.total || 0;
+};
 
 // GET ALL với date filter (mặc định hôm nay)
+const getCurrentSlot = () => {
+  const now = new Date();
+  const date = now.toISOString().split("T")[0];
+  const slotMinute = now.getMinutes() < 30 ? "00" : "30";
+  const time = `${now.getHours().toString().padStart(2, "0")}:${slotMinute}`;
+
+  return { date, time };
+};
+
+const getReservationTableCountBySlot = async ({ date, time }) => {
+  const rows = await Reservation.aggregate([
+    {
+      $match: {
+        date,
+        time,
+        status: { $ne: "CANCELLED" },
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        total: { $sum: { $ifNull: ["$tableCount", "$people"] } },
+      },
+    },
+  ]);
+
+  return rows[0]?.total || 0;
+};
+
+export const getTableUsage = async (req, res) => {
+  try {
+    const slot =
+      req.query.date && req.query.time
+        ? { date: req.query.date, time: req.query.time }
+        : getCurrentSlot();
+
+    const [offlineTableCount, onlineReservedTableCount] = await Promise.all([
+      getActiveOfflineTableCount(),
+      getReservationTableCountBySlot(slot),
+    ]);
+
+    const usedTableCount = offlineTableCount + onlineReservedTableCount;
+
+    res.json({
+      maxTables: MAX_TABLES,
+      date: slot.date,
+      time: slot.time,
+      offlineTableCount,
+      onlineReservedTableCount,
+      usedTableCount,
+      availableTableCount: Math.max(0, MAX_TABLES - usedTableCount),
+    });
+  } catch (err) {
+    console.error("GET TABLE USAGE ERROR:", err);
+    res.status(500).json({ message: "Không lấy được tình trạng bàn" });
+  }
+};
+
 export const getAllReservations = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
@@ -55,10 +135,15 @@ export const getAllReservations = async (req, res) => {
 
 export const createReservation = async (req, res) => {
   try {
-    const { name, phone, email, date, time, people, note } = req.body;
+    const { name, phone, email, date, time, people, tableCount, note } = req.body;
+    const requestedTables = Number(tableCount ?? people);
 
-    if (!name || !phone || !email || !date || !time || !people) {
+    if (!name || !phone || !email || !date || !time || !requestedTables) {
       return res.status(400).json({ message: "Thiếu dữ liệu bắt buộc" });
+    }
+
+    if (!Number.isInteger(requestedTables) || requestedTables <= 0 || requestedTables > MAX_TABLES) {
+      return res.status(400).json({ message: "Số bàn phải từ 1 đến 24" });
     }
 
     // Ghép date + time → reservationTime
@@ -66,6 +151,16 @@ export const createReservation = async (req, res) => {
 
     if (isNaN(reservationTime.getTime())) {
       return res.status(400).json({ message: "Thời gian đặt không hợp lệ" });
+    }
+
+    const [hour, minute] = time.split(":").map(Number);
+    if (
+      Number.isNaN(hour) ||
+      Number.isNaN(minute) ||
+      hour < OPEN_HOUR ||
+      hour >= CLOSE_HOUR
+    ) {
+      return res.status(400).json({ message: "Chỉ nhận đặt bàn từ 8h đến trước 23h" });
     }
 
     // Không cho đặt trong quá khứ
@@ -77,24 +172,16 @@ export const createReservation = async (req, res) => {
       date,
       time,
       status: { $ne: "CANCELLED" },
-    }).select("tableNumber");
+    }).select("tableCount tableNumber");
 
-    if (activeReservations.length >= MAX_TABLES) {
-      return res.status(400).json({ message: "Đã hết bàn cho khung giờ này" });
-    }
-
-    const usedTables = new Set(
-      activeReservations
-        .map((item) => item.tableNumber)
-        .filter((tableNumber) => Number.isInteger(tableNumber))
+    const reservedTableCount = activeReservations.reduce(
+      (sum, item) => sum + Number(item.tableCount || (item.tableNumber ? 1 : 0) || 1),
+      0
     );
+    const activeOfflineTableCount = await getActiveOfflineTableCount();
+    const availableTables = MAX_TABLES - reservedTableCount - activeOfflineTableCount;
 
-    let tableNumber = 1;
-    while (usedTables.has(tableNumber) && tableNumber <= MAX_TABLES) {
-      tableNumber += 1;
-    }
-
-    if (tableNumber > MAX_TABLES) {
+    if (requestedTables > availableTables) {
       return res.status(400).json({ message: "Đã hết bàn cho khung giờ này" });
     }
 
@@ -105,8 +192,9 @@ export const createReservation = async (req, res) => {
       date,
       time,
       reservationTime,
-      people,
-      tableNumber,
+      people: requestedTables,
+      tableCount: requestedTables,
+      tableNumber: null,
       note,
       status: "PENDING",
     });

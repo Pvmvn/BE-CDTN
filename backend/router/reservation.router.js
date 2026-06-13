@@ -1,8 +1,9 @@
 import express from 'express';
-import { cancelReservation, confirmReservation, createReservation, deleteReservation, getAllReservations } from '../controllers/reservation/reservation.controller.js';
+import { cancelReservation, confirmReservation, createReservation, deleteReservation, getAllReservations, getTableUsage } from '../controllers/reservation/reservation.controller.js';
 import { verifyToken, isAdminOrStaff, isAdmin } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
+router.get("/table-usage", verifyToken, isAdminOrStaff, getTableUsage);
 router.get("/", verifyToken, isAdminOrStaff, getAllReservations);
 router.post("/", createReservation);
 router.patch("/:id/confirm", verifyToken, isAdminOrStaff, confirmReservation);

@@ -13,6 +13,21 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       default: null,
     },
+    pagerStatus: {
+      type: String,
+      enum: ["HOLDING", "RETURNED", null],
+      default: null,
+    },
+    pagerReturnedAt: {
+      type: Date,
+      default: null,
+    },
+    tableCount: {
+      type: Number,
+      min: 1,
+      max: 24,
+      default: 1,
+    },
     // Voucher áp dụng (nếu có)
     voucherId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -94,7 +109,7 @@ orderSchema.index(
   {
     unique: true,
     partialFilterExpression: {
-      status: "PROCESSING",
+      pagerStatus: "HOLDING",
       pagerNumber: { $type: "number" },
     },
   }

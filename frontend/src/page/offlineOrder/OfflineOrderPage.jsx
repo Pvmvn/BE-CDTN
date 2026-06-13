@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import productApi from "../../api/productApi";
 import orderApi from "../../api/orderApi";
+import reservationApi from "../../api/reservationApi";
 import { formatCurrencyVN } from "../../utils/formatCurrencyVN";
 import { FiPlus, FiMinus, FiTrash2, FiShoppingCart } from "react-icons/fi";
 import useAuthStore from "../../store/authStore";
@@ -10,13 +11,23 @@ const OfflineOrderPage = () => {
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const [pagerNumber, setPagerNumber] = useState("");
+  const [tableCount, setTableCount] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [tableUsage, setTableUsage] = useState({
+    maxTables: 24,
+    offlineTableCount: 0,
+    onlineReservedTableCount: 0,
+    availableTableCount: 24,
+  });
+  const [onlineReservations, setOnlineReservations] = useState([]);
   const {user} = useAuthStore()
   // Load products
   useEffect(() => {
     loadProducts();
+    loadTableUsage();
+    loadOnlineReservations();
   }, []);
   useEffect(() => {
       document.title = `Gọi món`;
@@ -31,6 +42,31 @@ const OfflineOrderPage = () => {
       toast.error("Lỗi khi tải danh sách món");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadTableUsage = async () => {
+    try {
+      const data = await reservationApi.getTableUsage();
+      setTableUsage(data);
+    } catch {
+      // Không chặn tạo đơn nếu chỉ lỗi phần hiển thị tình trạng bàn.
+    }
+  };
+
+  const getTodayString = () => new Date().toISOString().split("T")[0];
+
+  const loadOnlineReservations = async () => {
+    try {
+      const today = getTodayString();
+      const data = await reservationApi.getAll({ startDate: today, endDate: today });
+      setOnlineReservations(
+        (data.reservations || [])
+          .filter((reservation) => reservation.status !== "CANCELLED")
+          .sort((a, b) => String(a.time).localeCompare(String(b.time)))
+      );
+    } catch {
+      // Không chặn tạo đơn nếu chỉ lỗi phần danh sách đặt bàn online.
     }
   };
   
@@ -111,12 +147,14 @@ const OfflineOrderPage = () => {
 
   // Tạo đơn
   const handleCreateOrder = async () => {
-    if (!pagerNumber.trim()) {
-      toast.error("Vui lòng nhập số thẻ bàn");
+    const parsedPagerNumber = Number(pagerNumber);
+    if (!Number.isInteger(parsedPagerNumber) || parsedPagerNumber <= 0) {
+      toast.error("Thiếu số thẻ");
       return;
     }
-    if (parseInt(pagerNumber) <= 0) {
-      toast.error("Số thẻ phải lớn hơn 0");
+
+    if (tableCount <= 0 || tableCount > 24) {
+      toast.error("Số bàn phải từ 1 đến 24");
       return;
     }
 
@@ -133,17 +171,21 @@ const OfflineOrderPage = () => {
       }
       const orderData = {
         userId: user.id,
+        pagerNumber: parsedPagerNumber,
         items: cart.map((item) => ({
           productId: item.productId,
           quantity: item.quantity,
           note: item.note,
         })),
-        pagerNumber: parseInt(pagerNumber),
+        tableCount,
       };
-      await orderApi.createOrderOffline(orderData);
-      toast.success("Tạo đơn thành công!");
+      const result = await orderApi.createOrderOffline(orderData);
+      toast.success(`Tạo đơn thành công! Số thẻ: ${result.order?.pagerNumber || "N/A"}`);
       setCart([]);
       setPagerNumber("");
+      setTableCount(1);
+      loadTableUsage();
+      loadOnlineReservations();
     } catch (error) {
       toast.error(error.response?.data?.message || "Tạo đơn thất bại");
     } finally {
@@ -237,12 +279,102 @@ const OfflineOrderPage = () => {
           </label>
           <input
             type="number"
-            placeholder="Nhập số thẻ..."
-            value={pagerNumber}
             min={1}
+            value={pagerNumber}
             onChange={(e) => setPagerNumber(e.target.value)}
-            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            placeholder="Nhập số thẻ..."
+            className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
           />
+        </div>
+
+        {/* Số bàn đang dùng */}
+        <div className="mb-6">
+          <div className="mb-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Chọn số lượng bàn <span className="text-red-500">*</span>
+            </label>
+          </div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setTableCount((value) => Math.max(1, value - 1))}
+                className="w-10 h-10 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded-lg cursor-pointer"
+              >
+                <FiMinus />
+              </button>
+              <input
+                type="number"
+                min={1}
+                max={24}
+                value={tableCount}
+                onChange={(e) =>
+                  setTableCount(Math.max(1, Math.min(24, Number(e.target.value) || 1)))
+                }
+                className="w-20 px-3 py-2 border rounded-lg text-center font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setTableCount((value) => Math.min(24, value + 1))}
+                className="w-10 h-10 flex items-center justify-center bg-blue-500 hover:bg-blue-600 text-white rounded-lg cursor-pointer"
+              >
+                <FiPlus />
+              </button>
+            </div>
+            
+          </div>
+          <p className="mt-2 text-xs text-gray-500">
+            Đang phục vụ tại quán: {tableUsage.offlineTableCount || 0} bàn, còn trống sau đơn này:{" "}
+            {Math.max(
+              0,
+              (tableUsage.maxTables || 24) -
+                (tableUsage.offlineTableCount || 0) -
+                (tableUsage.onlineReservedTableCount || 0) -
+                tableCount
+            )}{" "}
+            bàn
+          </p>
+        </div>
+
+        {/* Lịch đặt bàn online hôm nay */}
+        <div className="mb-6 rounded-lg border border-orange-100 bg-orange-50 px-4 py-3">
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <p className="text-sm font-semibold text-orange-800">
+              Đặt bàn online hôm nay
+            </p>
+            <span className="text-xs font-semibold text-orange-700">
+              {onlineReservations.length} lịch
+            </span>
+          </div>
+          {onlineReservations.length > 0 ? (
+            <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
+              {onlineReservations.map((reservation) => (
+                <div
+                  key={reservation._id}
+                  className="flex items-center justify-between rounded-md bg-white px-3 py-2 text-xs border border-orange-100"
+                >
+                  <div>
+                    <p className="font-bold text-gray-800">{reservation.time}</p>
+                    <p className="text-gray-500 truncate max-w-[160px]">
+                      {reservation.name} - {reservation.phone}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-orange-700">
+                      {reservation.tableCount || reservation.people || 1} bàn
+                    </p>
+                    <p className="text-gray-500">
+                      {reservation.status === "PENDING" ? "Đang chờ" : "Đã đến"}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-orange-700">
+              Chưa có lịch đặt bàn online trong hôm nay.
+            </p>
+          )}
         </div>
 
         {/* Danh sách món trong giỏ */}
