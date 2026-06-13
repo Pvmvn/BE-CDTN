@@ -54,7 +54,10 @@ export default function Orders() {
 
   // Socket setup
   useEffect(() => {
-    const socket = io("http://localhost:5000");
+    const SOCKET_URL = import.meta.env.VITE_API_URL 
+      ? import.meta.env.VITE_API_URL.replace("/api", "") 
+      : "https://be-cdtn.onrender.com";
+    const socket = io(SOCKET_URL);
 
     socket.on("connect", () => {
       socket.emit("join_admin");
