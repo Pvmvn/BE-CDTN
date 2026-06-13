@@ -8,7 +8,7 @@ import playTingSound from "../../utils/playTingSound";
 import { AiOutlineEye } from "react-icons/ai";
 import { BsClipboardCheckFill } from "react-icons/bs";
 import { FaMoneyBillWave, FaTimesCircle } from "react-icons/fa";
-import { FiRefreshCw } from "react-icons/fi";
+import { FiMinus, FiPlus } from "react-icons/fi";
 import ModalOrderDetail from "../../components/modal/adminOrders/ModalDetailOrder";
 import ModalConfirmCompleteOrder from "../../components/modal/adminOrders/ModalConfirmCompleteOrder";
 import ModalConfirm from "../../components/modal/adminReservation/ModalConfirm";
@@ -187,6 +187,17 @@ export default function Orders() {
     } finally {
       setIsOpenConfirmCancel(false);
       setOrderData(null);
+    }
+  };
+
+  const handleUpdateTableCount = async (order, nextTableCount) => {
+    if (nextTableCount < 1 || nextTableCount > 24) return;
+    try {
+      const res = await orderApi.updateTableCount(order._id, nextTableCount);
+      setOrders((prev) => prev.map((o) => (o._id === order._id ? res : o)));
+      toast.success("Đã cập nhật số bàn");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Lỗi khi cập nhật số bàn");
     }
   };
 
@@ -380,6 +391,7 @@ const handleQuickDate = (type) => {
                 "Thời gian",
                 "Tổng tiền",
                 "Số lượng món",
+                "Số bàn",
                 "Thanh toán",
                 "Trạng thái",
                 "Thao tác",
@@ -421,6 +433,35 @@ const handleQuickDate = (type) => {
                   <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded font-medium">
                     {order.items.length} món
                   </span>
+                </td>
+                <td className="px-6 py-4 text-sm">
+                  {order.orderType === "OFFLINE" ? (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={order.status !== "PROCESSING" || (order.tableCount || 1) <= 1}
+                        onClick={() => handleUpdateTableCount(order, (order.tableCount || 1) - 1)}
+                        className="w-7 h-7 flex items-center justify-center rounded bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                        title="Giảm số bàn"
+                      >
+                        <FiMinus className="w-3 h-3" />
+                      </button>
+                      <span className="min-w-12 px-2 py-1 bg-blue-50 text-blue-700 rounded text-center font-semibold">
+                        {order.tableCount || 1}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={order.status !== "PROCESSING" || (order.tableCount || 1) >= 24}
+                        onClick={() => handleUpdateTableCount(order, (order.tableCount || 1) + 1)}
+                        className="w-7 h-7 flex items-center justify-center rounded bg-blue-100 text-blue-700 hover:bg-blue-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                        title="Tăng số bàn"
+                      >
+                        <FiPlus className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-gray-400">-</span>
+                  )}
                 </td>
                 <td className="px-6 py-4 text-sm">
                   <span

@@ -13,6 +13,12 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       default: null,
     },
+    tableCount: {
+      type: Number,
+      min: 1,
+      max: 24,
+      default: 1,
+    },
     // Voucher áp dụng (nếu có)
     voucherId: {
       type: mongoose.Schema.Types.ObjectId,

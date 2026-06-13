@@ -37,9 +37,17 @@ const reservationSchema = new mongoose.Schema(
 
     people: {
       type: Number,
-      required: true,
+      default: 1,
       min: 1,
       max: 20,
+    },
+
+    tableCount: {
+      type: Number,
+      required: true,
+      min: 1,
+      max: 24,
+      default: 1,
     },
 
     tableNumber: {
