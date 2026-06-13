@@ -403,8 +403,30 @@ const handleQuickDate = (type) => {
                 "Thời gian",
                 "Tổng tiền",
                 "Số lượng món",
-                "Số bàn",
-                "Thẻ bàn",
+              ].map((head) => (
+                <th
+                  key={head}
+                  className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap"
+                >
+                  {head}
+                </th>
+              ))}
+              {orderTypeFilter === "OFFLINE" && (
+                <>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Số bàn</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Thẻ bàn</th>
+                </>
+              )}
+              {orderTypeFilter === "ONLINE" && (
+                <>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Khách hàng</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Địa chỉ</th>
+                </>
+              )}
+              {orderTypeFilter === "ALL" && (
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Thông tin nhận hàng</th>
+              )}
+              {[
                 "Thanh toán",
                 "Trạng thái",
                 "Thao tác",
@@ -447,68 +469,148 @@ const handleQuickDate = (type) => {
                     {order.items.length} món
                   </span>
                 </td>
-                <td className="px-3 py-3 text-sm whitespace-nowrap">
-                  {order.orderType === "OFFLINE" ? (
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        disabled={order.status !== "PROCESSING" || (order.tableCount || 1) <= 1}
-                        onClick={() => handleUpdateTableCount(order, (order.tableCount || 1) - 1)}
-                        className="w-7 h-7 flex items-center justify-center rounded bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                        title="Giảm số bàn"
-                      >
-                        <FiMinus className="w-3 h-3" />
-                      </button>
-                      <span className="min-w-12 px-2 py-1 bg-blue-50 text-blue-700 rounded text-center font-semibold">
-                        {order.tableCount || 1}
+                {/* Các cột động theo Order Type Filter */}
+                {orderTypeFilter === "OFFLINE" && (
+                  <>
+                    <td className="px-3 py-3 text-sm whitespace-nowrap">
+                      {order.orderType === "OFFLINE" ? (
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            disabled={order.status !== "PROCESSING" || (order.tableCount || 1) <= 1}
+                            onClick={() => handleUpdateTableCount(order, (order.tableCount || 1) - 1)}
+                            className="w-7 h-7 flex items-center justify-center rounded bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                            title="Giảm số bàn"
+                          >
+                            <FiMinus className="w-3 h-3" />
+                          </button>
+                          <span className="min-w-12 px-2 py-1 bg-blue-50 text-blue-700 rounded text-center font-semibold">
+                            {order.tableCount || 1}
+                          </span>
+                          <button
+                            type="button"
+                            disabled={order.status !== "PROCESSING" || (order.tableCount || 1) >= 24}
+                            onClick={() => handleUpdateTableCount(order, (order.tableCount || 1) + 1)}
+                            className="w-7 h-7 flex items-center justify-center rounded bg-blue-100 text-blue-700 hover:bg-blue-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                            title="Tăng số bàn"
+                          >
+                            <FiPlus className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-3 text-sm whitespace-nowrap">
+                      {order.orderType === "OFFLINE" && order.pagerNumber ? (() => {
+                        const isHolding = order.pagerStatus === "HOLDING" || (!order.pagerStatus && order.status === "PROCESSING");
+                        const isReturned = order.pagerStatus === "RETURNED";
+                        return (
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-gray-800">#{order.pagerNumber}</span>
+                            {isHolding ? (
+                              <>
+                                <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded text-xs font-medium">
+                                  Đang giữ
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleReturnPager(order._id)}
+                                  className="flex items-center gap-1 px-2 py-1 bg-teal-50 text-teal-700 border border-teal-200 rounded text-xs font-medium hover:bg-teal-100 transition-colors cursor-pointer"
+                                  title="Thu hồi thẻ bàn"
+                                >
+                                  <IoHandRight className="w-3.5 h-3.5" />
+                                  Thu thẻ
+                                </button>
+                              </>
+                            ) : isReturned ? (
+                              <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium">
+                                Đã thu
+                              </span>
+                            ) : null}
+                          </div>
+                        );
+                      })() : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                  </>
+                )}
+
+                {orderTypeFilter === "ONLINE" && (
+                  <>
+                    <td className="px-3 py-3 text-sm whitespace-nowrap">
+                      <div className="flex flex-col">
+                        <span className="font-semibold">{order.delivery?.name || "Không tên"}</span>
+                        <span className="text-gray-500 text-xs">{order.delivery?.phone || "Không SĐT"}</span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-3 text-sm whitespace-nowrap">
+                      <span className="text-gray-600 truncate max-w-[150px] inline-block" title={order.delivery?.address}>
+                        {order.delivery?.address || "Nhận tại quán"}
                       </span>
-                      <button
-                        type="button"
-                        disabled={order.status !== "PROCESSING" || (order.tableCount || 1) >= 24}
-                        onClick={() => handleUpdateTableCount(order, (order.tableCount || 1) + 1)}
-                        className="w-7 h-7 flex items-center justify-center rounded bg-blue-100 text-blue-700 hover:bg-blue-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                        title="Tăng số bàn"
-                      >
-                        <FiPlus className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ) : (
-                    <span className="text-gray-400">-</span>
-                  )}
-                </td>
-                <td className="px-3 py-3 text-sm whitespace-nowrap">
-                  {order.orderType === "OFFLINE" && order.pagerNumber ? (() => {
-                    const isHolding = order.pagerStatus === "HOLDING" || (!order.pagerStatus && order.status === "PROCESSING");
-                    const isReturned = order.pagerStatus === "RETURNED";
-                    return (
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-gray-800">#{order.pagerNumber}</span>
-                        {isHolding ? (
-                          <>
-                            <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded text-xs font-medium">
-                              Đang giữ
-                            </span>
+                    </td>
+                  </>
+                )}
+
+                {orderTypeFilter === "ALL" && (
+                  <td className="px-3 py-3 text-sm whitespace-nowrap">
+                    {order.orderType === "OFFLINE" ? (
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-500 text-xs w-8">Bàn:</span>
+                          <div className="flex items-center gap-1">
                             <button
                               type="button"
-                              onClick={() => handleReturnPager(order._id)}
-                              className="flex items-center gap-1 px-2 py-1 bg-teal-50 text-teal-700 border border-teal-200 rounded text-xs font-medium hover:bg-teal-100 transition-colors cursor-pointer"
-                              title="Thu hồi thẻ bàn"
+                              disabled={order.status !== "PROCESSING" || (order.tableCount || 1) <= 1}
+                              onClick={() => handleUpdateTableCount(order, (order.tableCount || 1) - 1)}
+                              className="w-5 h-5 flex items-center justify-center rounded bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                             >
-                              <IoHandRight className="w-3.5 h-3.5" />
-                              Thu thẻ
+                              <FiMinus className="w-2 h-2" />
                             </button>
-                          </>
-                        ) : isReturned ? (
-                          <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium">
-                            Đã thu
-                          </span>
-                        ) : null}
+                            <span className="px-1 text-xs font-semibold">{order.tableCount || 1}</span>
+                            <button
+                              type="button"
+                              disabled={order.status !== "PROCESSING" || (order.tableCount || 1) >= 24}
+                              onClick={() => handleUpdateTableCount(order, (order.tableCount || 1) + 1)}
+                              className="w-5 h-5 flex items-center justify-center rounded bg-blue-100 text-blue-700 hover:bg-blue-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                            >
+                              <FiPlus className="w-2 h-2" />
+                            </button>
+                          </div>
+                        </div>
+                        {order.pagerNumber && (() => {
+                          const isHolding = order.pagerStatus === "HOLDING" || (!order.pagerStatus && order.status === "PROCESSING");
+                          const isReturned = order.pagerStatus === "RETURNED";
+                          return (
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-500 text-xs w-8">Thẻ:</span>
+                              <span className="font-semibold text-xs mr-1">#{order.pagerNumber}</span>
+                              {isHolding ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleReturnPager(order._id)}
+                                  className="flex items-center gap-1 px-1.5 py-0.5 bg-teal-50 text-teal-700 border border-teal-200 rounded text-[10px] font-medium hover:bg-teal-100 transition-colors cursor-pointer"
+                                >
+                                  Thu thẻ
+                                </button>
+                              ) : isReturned ? (
+                                <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-[10px] font-medium">Đã thu</span>
+                              ) : null}
+                            </div>
+                          );
+                        })()}
                       </div>
-                    );
-                  })() : (
-                    <span className="text-gray-400">-</span>
-                  )}
-                </td>
+                    ) : (
+                      <div className="flex flex-col gap-1">
+                        <span className="font-semibold text-xs">{order.delivery?.name || "Không tên"} - {order.delivery?.phone || "Không SĐT"}</span>
+                        <span className="text-gray-500 text-xs truncate max-w-[180px]" title={order.delivery?.address}>
+                          {order.delivery?.address || "Nhận tại quán"}
+                        </span>
+                      </div>
+                    )}
+                  </td>
+                )}
                 <td className="px-3 py-3 text-sm whitespace-nowrap">
                   <span
                     className={`

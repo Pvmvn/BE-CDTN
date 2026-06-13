@@ -15,7 +15,7 @@ const orderSchema = new mongoose.Schema(
     },
     pagerStatus: {
       type: String,
-      enum: ["HOLDING", "RETURNED"],
+      enum: ["HOLDING", "RETURNED", null],
       default: null,
     },
     pagerReturnedAt: {

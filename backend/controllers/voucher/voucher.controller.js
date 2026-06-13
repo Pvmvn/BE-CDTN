@@ -400,6 +400,51 @@ export const getAvailableVouchers = async (req, res) => {
     return res.status(500).json({ message: error.message });
   }
 };
+
+// Tìm voucher tốt nhất cho đơn hàng
+export const findBestVoucher = async (req, res) => {
+  try {
+    const { items, total, userId } = req.body;
+    if (!items || !total || !userId) {
+      return res.status(400).json({ message: "Thiếu thông tin đơn hàng" });
+    }
+
+    const now = new Date();
+    const vouchers = await Voucher.find({
+      startDate: { $lte: now },
+      endDate: { $gte: now },
+      status: { $ne: "inactive" },
+      $expr: { $lt: ["$usedCount", "$usageLimit"] },
+    });
+
+    let bestResult = null;
+
+    for (const voucher of vouchers) {
+      try {
+        const result = await calculateVoucherDiscount({
+          voucherCode: voucher.code,
+          items,
+          total,
+          userId,
+        });
+        if (!bestResult || result.discount > bestResult.discount) {
+          bestResult = result;
+        }
+      } catch {
+        // Voucher không hợp lệ cho đơn này, bỏ qua
+      }
+    }
+
+    if (!bestResult) {
+      return res.json({ found: false, message: "Không có voucher phù hợp" });
+    }
+
+    res.json({ found: true, ...bestResult });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
 export const toggleVoucherStatus = async (req, res) => {
   try {
     const { id } = req.params;
